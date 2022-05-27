@@ -1,9 +1,9 @@
 function lz4_encoder_final(fname, search_buffer)
 
 %specify number of bytes to look back for a match
-search_buffer = 1024;
+search_buffer = 6;
 
-fname = 'flights.html';
+fname = '../test_files/swearing.txt';
 extension = '.1';
 
 tic
