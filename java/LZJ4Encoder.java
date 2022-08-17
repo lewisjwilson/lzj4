@@ -10,6 +10,9 @@ class LZJ4Encoder {
     static int windowBuf = dataLen; // temporarily - to encode all data at once
     static int pos = 0;
 
+    // Setting the window
+    static String window = getWindow();
+
     public void updateBuffer() {
         // TODO
     }
@@ -26,9 +29,6 @@ class LZJ4Encoder {
     public static ArrayList<Integer> findMatches(String str, String subStr) {
         ArrayList<Integer> matches = new ArrayList<Integer>();
         for (int i = -1; (i = str.indexOf(subStr, i + 1)) != -1; i++) {
-            if (i == 0) {
-                continue; // remove the case where substring match is the beginning of the string
-            }
             matches.add(i);
         }
         return matches;
@@ -37,6 +37,7 @@ class LZJ4Encoder {
     public static void dataEncode(String window) {
 
         String bestMatch = "", subStr = "";
+        int matchLen = 0;
 
         for (int i = pos; i < windowBuf; i++) {
             String curByte = Character.toString(testData.charAt(i)); // Get the current byte from the window
@@ -48,7 +49,7 @@ class LZJ4Encoder {
             }
             System.out.println("SubStr: " + subStr);
             ArrayList<Integer> matches = findMatches(window, subStr);
-            System.out.println("Matches: " + matches);
+            System.out.println("Match indexes: " + matches);
 
             // If there are no matches, reset the subStr variable and continue
             if (matches.isEmpty()) {
@@ -57,20 +58,22 @@ class LZJ4Encoder {
             } else {
                 // If the length of the current best match is less than the length of the
                 // current substring
-                if (bestMatch.length() < subStr.length()) {
+                matchLen = subStr.length();
+                if (bestMatch.length() < matchLen) {
                     // Replace the best match
                     bestMatch = subStr;
                 }
 
             }
-            System.out.println("Best Match: " + bestMatch);
-
         }
+        System.out.println("Window: " + window);
+        System.out.println("Best Match: " + bestMatch);
+        System.out.println("Match length: " + matchLen);
+
     }
 
     public static void main(String[] args) {
 
-        String window = getWindow();
         System.out.println(window);
         dataEncode(window);
 
