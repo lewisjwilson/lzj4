@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 
 class LZJ4Encoder {
-
+    
     // Data variables
     static String testData = "abbccabbcccabbaabcc";
     static int dataLen = testData.length();
@@ -24,7 +24,7 @@ class LZJ4Encoder {
             return testData.substring(pos, windowBuf);
         }
     }
-
+    
     // Method to find the indexes of substring matches in a string
     public static ArrayList<Integer> findMatches(String str, String subStr) {
         ArrayList<Integer> matches = new ArrayList<Integer>();
@@ -34,17 +34,33 @@ class LZJ4Encoder {
         return matches;
     }
 
-    public static void dataEncode(String window) {
+    public static ArrayList<Byte> createDataBlock(String symbols, int cursorPosition, int matchLength, ArrayList<Integer> matches) {
+        String hiToken = Integer.toHexString(matchLength);
+        String loToken = Integer.toHexString(matchLength-4);
+        int offset = cursorPosition - matchLength;
+
+        ArrayList<Byte> dataBlock = new ArrayList<>();
+
+        return dataBlock;
+    }
+
+    public static void dataTraverse(String window) {
 
         String bestMatch = "", subStr = "";
         int matchLen = 0;
 
-        for (int i = pos; i < windowBuf; i++) {
-            String curByte = Character.toString(testData.charAt(i)); // Get the current byte from the window
+        while(pos<dataLen) {
+            window = getWindow();
+
+            System.out.println("pos: "+ pos);
+            System.out.println(window);
+
+            String curByte = Character.toString(testData.charAt(pos)); // Get the current byte from the window
             subStr = subStr.concat(curByte); // Add the current byte to the subStr ArrayList
 
             // Matches must be >= 4
             if (subStr.length() < 5) {
+                pos++;
                 continue;
             }
             System.out.println("SubStr: " + subStr);
@@ -56,15 +72,20 @@ class LZJ4Encoder {
                 subStr = "";
                 continue;
             } else {
+
+                //while(subStr == )
                 // If the length of the current best match is less than the length of the
                 // current substring
                 matchLen = subStr.length();
                 if (bestMatch.length() < matchLen) {
                     // Replace the best match
                     bestMatch = subStr;
+                    createDataBlock(bestMatch, pos, matchLen, matches);
                 }
+                subStr = "";
 
             }
+            pos++;
         }
         System.out.println("Window: " + window);
         System.out.println("Best Match: " + bestMatch);
@@ -74,8 +95,7 @@ class LZJ4Encoder {
 
     public static void main(String[] args) {
 
-        System.out.println(window);
-        dataEncode(window);
+        dataTraverse(window);
 
     }
 
