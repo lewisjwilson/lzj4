@@ -1,5 +1,5 @@
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 class LZJ4Encoder {
 
@@ -47,54 +47,71 @@ class LZJ4Encoder {
         return matches;
     }
 
-    public static List<Byte> createDataBlock(String symbols, int cursorPosition, int matchLength,
+    public static byte[] createDataBlock(String symbols, int cursorPosition, int matchLength,
             ArrayList<Integer> matches) {
-        String hiToken = String.format("%04d", Integer.toBinaryString(matchLength));
-        String loToken = String.format("%04d", Integer.toBinaryString(matchLength - 1));
+        String hiToken = String.format("%4s", Integer.toBinaryString(matchLength)).replace(' ', '0');
+        String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
+        // Converting the binary string token to Hexadecimal
+        int tokenDec = Integer.parseInt(token, 2);
+        String tokenHex = Integer.toHexString(tokenDec);
 
-        // offset is the current buffer length minus the index of a match
-        int offset = buffer.length() - matches.get(0); // First element in matches
+        // Offset is the current buffer length minus the index of a match
+        // (First element in matches)
+        String offset = String.format("%16s", Integer.toBinaryString(buffer.length() - matches.get(0))).replace(' ',
+                '0');
+        // Converting binary string offset to Hexadecimal
+        int offsetDec = Integer.parseInt(offset, 2);
+        String offsetHex = String.format("%4s", Integer.toHexString(offsetDec)).replace(' ', '0');
+        String offsetByte1 = offsetHex.substring(2, 4);
+        String offsetByte2 = offsetHex.substring(0, 2);
 
-        System.out.println("pos: " + cursorPosition);
-        System.out.println("symbols: " + symbols);
-        System.out.println("hi: " + hiToken);
-        System.out.println("lo: " + loToken);
-        System.out.println("token: " + token);
-        System.out.println("offset: " + offset);
+        // Populating dataBlock with symbols (byte representation)
+        byte[] symbolsArr = symbols.getBytes();
 
-        List<Byte> dataBlock = new ArrayList<Byte>();
-        // dataBlock.add();
+        // Setting size of dataBlock (1: token + symbols length + 2:offset)
+        int blockLen = 1 + symbolsArr.length + 2;
+        byte[] dataBlock = new byte[blockLen];
 
-        // incrementing pos
-        pos = pos + matchLength;
+        // Add token to the datablock
+        dataBlock[0] = Byte.valueOf(tokenHex); // Add token to the datablock
+
+        // Add symbols to datablock (byte representation)
+        System.arraycopy(symbolsArr, 0, dataBlock, 1, symbolsArr.length);
+
+        // Add offset to dataBlock
+        dataBlock[blockLen - 2] = Byte.valueOf(offsetByte1);
+        dataBlock[blockLen - 1] = Byte.valueOf(offsetByte2);
+
+        System.out.println("datablock: " + Arrays.toString(dataBlock));
+
         return dataBlock;
     }
 
     public static void dataTraverse(String window) {
 
         while (pos < dataLen) {
-            // System.out.println("pos: " + pos);
+            System.out.println("pos: " + pos);
 
             String bestMatch = "";
             String subStr = "";
             int matchLen = 0;
 
             for (int c = 0; c < window.length(); c++) {
-                // System.out.println("pos: " + pos);
+                System.out.println("pos: " + pos);
 
                 // Matches must be >= 4
-                if (c < 5) {
+                if (c < 4) {
                     pos++;
                     continue;
                 }
 
                 window = getWindow();
                 buffer = getBuffer();
-                System.out.println("window: " + window);
                 System.out.println("buffer: " + buffer);
+                System.out.println("window: " + window);
 
-                subStr = window.substring(0, c); // get the current subscrting from the window
+                subStr = window.substring(0, c); // get the current substring from the window
                 System.out.println("subStr: " + subStr);
 
                 ArrayList<Integer> matches = findMatches(buffer, subStr);
@@ -114,6 +131,7 @@ class LZJ4Encoder {
                         // Replace the best match
                         bestMatch = subStr;
                         createDataBlock(bestMatch, pos, matchLen, matches);
+                        break;
                     }
                     subStr = "";
                 }
