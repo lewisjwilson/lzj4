@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Arrays;
 
 class LZJ4Encoder {
 
@@ -47,17 +46,23 @@ class LZJ4Encoder {
         return matches;
     }
 
-    public static byte[] createDataBlock(String symbols, int cursorPosition, int matchLength,
-            ArrayList<Integer> matches) {
+    private static void createDataBlock(int matchLength, String symbols, ArrayList<Integer> matches) {
+
+        // Initiate the lz4 data block
+        LZ4DataBlock lz4block = new LZ4DataBlock();
+
+        // Creating the token
         String hiToken = String.format("%4s", Integer.toBinaryString(matchLength)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
         // Converting the binary string token to Hexadecimal
         int tokenDec = Integer.parseInt(token, 2);
-        String tokenHex = Integer.toHexString(tokenDec);
+        token = Integer.toHexString(tokenDec);
 
-        // Offset is the current buffer length minus the index of a match
-        // (First element in matches)
+        // Processing the symbols
+        byte[] symbolsArr = symbols.getBytes();
+
+        // Processing the offset
         String offset = String.format("%16s", Integer.toBinaryString(buffer.length() - matches.get(0))).replace(' ',
                 '0');
         // Converting binary string offset to Hexadecimal
@@ -66,32 +71,17 @@ class LZJ4Encoder {
         String offsetByte1 = offsetHex.substring(2, 4);
         String offsetByte2 = offsetHex.substring(0, 2);
 
-        // Populating dataBlock with symbols (byte representation)
-        byte[] symbolsArr = symbols.getBytes();
+        lz4block.setToken(token);
+        lz4block.setSymbols(symbolsArr);
+        lz4block.setOffset(offsetByte1, offsetByte2);
 
-        // Setting size of dataBlock (1: token + symbols length + 2:offset)
-        int blockLen = 1 + symbolsArr.length + 2;
-        byte[] dataBlock = new byte[blockLen];
+        lz4block.createDataBlock();
 
-        // Add token to the datablock
-        dataBlock[0] = Byte.valueOf(tokenHex); // Add token to the datablock
-
-        // Add symbols to datablock (byte representation)
-        System.arraycopy(symbolsArr, 0, dataBlock, 1, symbolsArr.length);
-
-        // Add offset to dataBlock
-        dataBlock[blockLen - 2] = Byte.valueOf(offsetByte1);
-        dataBlock[blockLen - 1] = Byte.valueOf(offsetByte2);
-
-        System.out.println("datablock: " + Arrays.toString(dataBlock));
-
-        return dataBlock;
     }
 
     public static void dataTraverse(String window) {
 
         while (pos < dataLen) {
-            System.out.println("pos: " + pos);
 
             String bestMatch = "";
             String subStr = "";
@@ -107,6 +97,11 @@ class LZJ4Encoder {
                 }
 
                 window = getWindow();
+
+                if (window.length() <= 0) {
+                    System.out.println("End of data reached");
+                    break;
+                }
                 buffer = getBuffer();
                 System.out.println("buffer: " + buffer);
                 System.out.println("window: " + window);
@@ -130,16 +125,13 @@ class LZJ4Encoder {
                     if (bestMatch.length() < matchLen) {
                         // Replace the best match
                         bestMatch = subStr;
-                        createDataBlock(bestMatch, pos, matchLen, matches);
+                        createDataBlock(matchLen, bestMatch, matches);
                         break;
                     }
                     subStr = "";
                 }
 
             }
-
-            // System.out.println("Best Match: " + bestMatch);
-            // System.out.println("Match length: " + matchLen);
 
         }
 
