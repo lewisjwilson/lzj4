@@ -3,7 +3,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 class LZJ4Encoder {
 
@@ -15,7 +14,6 @@ class LZJ4Encoder {
     // Data variables
     static String testData = "abbccabbcccabbaabcc";
     static int dataLen = testData.length();
-    static List<Byte> encodedData = new ArrayList<Byte>();
 
     // Window buffer and search buffer variables
     static int windowBuf = 100000; // temporarily - to encode all data at once
@@ -91,27 +89,32 @@ class LZJ4Encoder {
         lz4block.setOffset(offsetByte1, offsetByte2);
 
         byte[] dataBlock = lz4block.createDataBlock();
-        for (int i = 0; i < dataBlock.length; i++) {
-            encodedData.add(dataBlock[i]);
+
+        try {
+            outStream.write(dataBlock);
+        } catch (IOException e) {
+            System.out.println("LZJ4Encoder.createDataBlock()");
+            e.printStackTrace();
         }
 
     }
 
     // Appending 5 ending literals (in line with spec) and bytes (value 0)
     public static void endOfData() {
-        int posMax = pos + 5;
-        while (pos < posMax) {
-            encodedData.add(encodedData.size(), (byte) testData.charAt(pos - 1));
-            pos++;
-        }
-        encodedData.add(encodedData.size(), (byte) 0);
-        encodedData.add(encodedData.size(), (byte) 0);
-        encodedData.add(encodedData.size(), (byte) 0);
-        encodedData.add(encodedData.size(), (byte) 0);
-
         try {
-            outStream.write(Byte.valueOf((byte) 97));
+            int posMax = pos + 5;
+            while (pos < posMax) {
+                // encodedData.add(encodedData.size(), (byte) testData.charAt(pos - 1));
+                outStream.write((byte) testData.charAt(pos - 1));
+                pos++;
+            }
+            // encodedData.add(encodedData.size(), (byte) 0);
+            outStream.write((byte) 0);
+            outStream.write((byte) 0);
+            outStream.write((byte) 0);
+            outStream.write((byte) 0);
         } catch (IOException e) {
+            System.out.println("LZJ4Encoder.endOfData()");
             e.printStackTrace();
         }
     }
@@ -126,7 +129,7 @@ class LZJ4Encoder {
             buffer = getBuffer();
 
             for (int c = 0; c < window.length(); c++) {
-                System.out.println("pos: " + pos);
+                // System.out.println("pos: " + pos);
                 newSymbolsCount++;
 
                 // Matches must be >= 4
@@ -187,6 +190,7 @@ class LZJ4Encoder {
             try {
                 outFile.createNewFile();
             } catch (Exception e) {
+                System.out.println("LZJ4Encoder.main()");
                 e.printStackTrace();
             }
         }
@@ -194,11 +198,19 @@ class LZJ4Encoder {
         try {
             outStream = new FileOutputStream(path, true);
         } catch (FileNotFoundException e) {
+            System.out.println("LZJ4Encoder.main()");
             e.printStackTrace();
         }
 
         dataTraverse(window);
-        System.out.println("Encoded LZ4 Data:\n" + encodedData);
+
+        try {
+            outStream.close();
+            System.out.println("File \"" + path + "\" successfully written.");
+        } catch (IOException e) {
+            System.out.println("LZJ4Encoder.main()");
+            e.printStackTrace();
+        }
 
     }
 
