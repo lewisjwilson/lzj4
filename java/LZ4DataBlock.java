@@ -18,7 +18,7 @@ public class LZ4DataBlock {
         return offset;
     }
 
-    public void createDataBlock() {
+    public byte[] createDataBlock() {
         int blockLen = 1 + this.getSymbols().length + 2;
         byte[] dataBlock = new byte[blockLen];
 
@@ -30,6 +30,8 @@ public class LZ4DataBlock {
         dataBlock[blockLen - 1] = Byte.valueOf(this.getOffset().substring(2, 4));
 
         System.out.println("Data Block: " + Arrays.toString(dataBlock));
+
+        return dataBlock;
 
     }
 
