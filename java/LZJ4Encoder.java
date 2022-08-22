@@ -1,7 +1,16 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 class LZJ4Encoder {
+
+    // Creating an output file
+    static String path = "out.lz4";
+    static File outFile = new File(path);
+    static FileOutputStream outStream;
 
     // Data variables
     static String testData = "abbccabbcccabbaabcc";
@@ -88,9 +97,28 @@ class LZJ4Encoder {
 
     }
 
+    // Appending 5 ending literals (in line with spec) and bytes (value 0)
+    public static void endOfData() {
+        int posMax = pos + 5;
+        while (pos < posMax) {
+            encodedData.add(encodedData.size(), (byte) testData.charAt(pos - 1));
+            pos++;
+        }
+        encodedData.add(encodedData.size(), (byte) 0);
+        encodedData.add(encodedData.size(), (byte) 0);
+        encodedData.add(encodedData.size(), (byte) 0);
+        encodedData.add(encodedData.size(), (byte) 0);
+
+        try {
+            outStream.write(Byte.valueOf((byte) 97));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void dataTraverse(String window) {
 
-        while (pos < dataLen) {
+        while (pos < dataLen - 5) {
 
             String bestMatch = "";
             int matchLen = 0;
@@ -121,14 +149,6 @@ class LZJ4Encoder {
                 subStr = window.substring(0, c); // get the current substring from the window
                 System.out.println("subStr: " + subStr);
 
-                if (c == window.length()) {
-                    byte[] remainingBytes = subStr.getBytes();
-                    for (int i = 0; i < remainingBytes.length; i++) {
-                        encodedData.add(remainingBytes[i]);
-                    }
-
-                }
-
                 ArrayList<Integer> matches = findMatches(buffer, subStr);
 
                 // If there are no matches, reset the subStr variable and continue
@@ -156,15 +176,26 @@ class LZJ4Encoder {
             }
 
         }
-        encodedData.add(encodedData.size(), (byte) 0);
-        encodedData.add(encodedData.size(), (byte) 0);
-        encodedData.add(encodedData.size(), (byte) 0);
-        encodedData.add(encodedData.size(), (byte) 0);
+        endOfData();
         System.out.println("End of data reached!");
 
     }
 
     public static void main(String[] args) {
+
+        if (!outFile.exists()) {
+            try {
+                outFile.createNewFile();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            outStream = new FileOutputStream(path, true);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         dataTraverse(window);
         System.out.println("Encoded LZ4 Data:\n" + encodedData);
