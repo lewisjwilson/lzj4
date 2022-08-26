@@ -104,11 +104,9 @@ class LZJ4Encoder {
         try {
             int posMax = pos + 5;
             while (pos < posMax) {
-                // encodedData.add(encodedData.size(), (byte) testData.charAt(pos - 1));
                 outStream.write((byte) testData.charAt(pos - 1));
                 pos++;
             }
-            // encodedData.add(encodedData.size(), (byte) 0);
             outStream.write((byte) 0);
             outStream.write((byte) 0);
             outStream.write((byte) 0);
