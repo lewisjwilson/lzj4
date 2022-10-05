@@ -70,6 +70,10 @@ public class LZJ4Decoder {
         boolean dataImport = importLZ4Data();
         System.out.println("Data Import Sucessful? " + dataImport);
         
-        System.out.println((char)dataList.get(0)[5]);
+        System.out.print("LZ4 data: ");
+        for(int i=0; i<FILESIZE; i++){
+            System.out.print((char)dataList.get(0)[i]);
+        }
+        System.out.print("\n");
     }
 }
