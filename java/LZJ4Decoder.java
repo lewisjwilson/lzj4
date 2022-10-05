@@ -1,12 +1,13 @@
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.util.ArrayList;;
 
 public class LZJ4Decoder {
     
     public static Path PATH;
     public static long FILESIZE;
-    public static byte[] data;
+    public static ArrayList<byte[]> dataList = new ArrayList<>();
     
     public static boolean importLZ4Data(){
         
@@ -25,21 +26,26 @@ public class LZJ4Decoder {
         }
         
         // initialize data bytearray with size of filesize
-        data = new byte[(int)FILESIZE];
+        // THIS ASSUMES FILESIZE IS WITHIN THE BOUNDS OF AN INT.
+        // TODO: if filesize > Integer.Max split data into multiple
+        // byte[] arrays and append to bytelist in order.
+        byte[] dataArray = new byte[(int)FILESIZE];
         
         try{
             // import lz4 data into bytearray
-            data = Files.readAllBytes(PATH);
+            dataArray = Files.readAllBytes(PATH);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
+        
+        dataList.add(dataArray);
         return true;
     }
     
     public static void main(String args[]) {
         
         boolean dataImport = importLZ4Data();
-        System.out.println((char)data[5]);
+        System.out.println((char)dataList.get(0)[5]);
     }
 }
