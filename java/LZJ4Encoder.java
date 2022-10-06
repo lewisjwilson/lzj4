@@ -2,9 +2,18 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 class LZJ4Encoder {
+
+    public static String pathStr = "test_files/abbccabbcccabbaabcc.txt";
+    public static Path PATH;
+    public static long FILESIZE;
+    public static ArrayList<byte[]> dataList = new ArrayList<>();
+    public static ArrayList<byte[]> outputList = new ArrayList<>();
 
     // Creating an output file
     static String path = "out.lz4";
@@ -30,6 +39,39 @@ class LZJ4Encoder {
 
     // Getting the data in the search buffer (search backward)
     public static String buffer = getBuffer();
+
+    public static boolean importData(){
+        // file location
+        PATH = Paths.get(pathStr);
+
+        // size in bytes initialize
+        FILESIZE = 0;
+        
+        try{
+            // get filesize of selected lz4 file
+            FILESIZE = Files.size(PATH);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        
+        // initialize data bytearray with size of filesize
+        // THIS ASSUMES FILESIZE IS WITHIN THE BOUNDS OF AN INT.
+        // TODO: if filesize > Integer.Max split data into multiple
+        // byte[] arrays and append to bytelist in order.
+        byte[] dataArray = new byte[(int)FILESIZE];
+        
+        try{
+            // import lz4 data into bytearray
+            dataArray = Files.readAllBytes(PATH);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        
+        dataList.add(dataArray);
+        return true;
+    }
 
     // Method to process the data in the buffer (dealing with end cases)
     public static String getBuffer() {
@@ -183,6 +225,8 @@ class LZJ4Encoder {
     }
 
     public static void main(String[] args) {
+
+        importData();
 
         if (!outFile.exists()) {
             try {

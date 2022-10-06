@@ -25,3 +25,4 @@ replay_pid*
 
 # LZ4 files
 *.lz4
+test_files/.DS_Store
