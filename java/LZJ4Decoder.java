@@ -134,9 +134,9 @@ public class LZJ4Decoder {
         //Verify the end marker matches 00 00 00 00
         if(!endMarkerCheck()){
             throw new Error("Ending Marker Incorrect (Should be {0x00 0x00 0x00 0x00})");
-        } else {
-            System.out.println("Ending Marker Verified.");
         }
+        System.out.println("Ending Marker Verified.");
+        
         
         System.out.print("Decompressed data: ");
         for(int i=0; i<currentByte; i++){
@@ -150,16 +150,14 @@ public class LZJ4Decoder {
         // Verify the magic number is correct
         if(!magicNumber()){
             throw new Error("Not a valid LZ4 file.");
-        } else {
-            System.out.println("Magic Number Verified.");
         }
+        System.out.println("Magic Number Verified.");
         
         // Import the data
         if(!importLZ4Data()){
             throw new Error("LZ4 data could not be read.");
-        } else {
-            System.out.println("LZ4 Data Read Sucessful.");
         }
+        System.out.println("LZ4 Data Read Sucessful.");
         
         // Print LZ4 data to console
         System.out.print("LZ4 data: ");
