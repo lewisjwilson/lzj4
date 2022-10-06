@@ -110,6 +110,11 @@ public class LZJ4Decoder {
             
             // Traversing the current decompressed data 'offset' bytes and copying matched data
             int copyFrom = currentByte - offset;
+            if(copyFrom<0){
+                int dataPos = pos-2;
+                throw new Error("Offset exceeds length of the current decompressed data. " +
+                "Data Position: Byte " + dataPos + ", Offset (Hex, Little Endian): " + offsetStr);
+            }
             
             // Append byte to outData in from every position between 
             // end of current outData and for matchLen position
@@ -127,8 +132,11 @@ public class LZJ4Decoder {
         }
         
         //Verify the end marker matches 00 00 00 00
-        boolean endMarker = endMarkerCheck();
-        System.out.println("Ending Marker Verified?: " + endMarker);
+        if(!endMarkerCheck()){
+            throw new Error("Ending Marker Incorrect (Should be {0x00 0x00 0x00 0x00})");
+        } else {
+            System.out.println("Ending Marker Verified.");
+        }
         
         System.out.print("Decompressed data: ");
         for(int i=0; i<currentByte; i++){
@@ -140,11 +148,18 @@ public class LZJ4Decoder {
     public static void main(String args[]) {
         
         // Verify the magic number is correct
-        System.out.println("Magic Number Verified? " + magicNumber());
+        if(!magicNumber()){
+            throw new Error("Not a valid LZ4 file.");
+        } else {
+            System.out.println("Magic Number Verified.");
+        }
         
         // Import the data
-        System.out.println("Data Import Sucessful? " + importLZ4Data());
-        
+        if(!importLZ4Data()){
+            throw new Error("LZ4 data could not be read.");
+        } else {
+            System.out.println("LZ4 Data Read Sucessful.");
+        }
         
         // Print LZ4 data to console
         System.out.print("LZ4 data: ");
