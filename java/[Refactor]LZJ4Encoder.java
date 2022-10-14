@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Arrays;
 
 class LZJ4Encoder {
@@ -29,7 +30,7 @@ class LZJ4Encoder {
     static int searchBufferSize = 100000; // temporarily - to encode all data at once
 
     // Initialize the number of new symbols used for token value in lz4 data block
-    public static int newSymbolsCount = -1;
+    public static int newSymbolsCount = 0;
 
     // Cursor position initialization
     public static int pos = 0;
@@ -74,18 +75,18 @@ class LZJ4Encoder {
     //HERE!! REFACTOR DOWNWARDS - return a byte array (subarray of the test data)
     public static byte[] getBuffer() {
         if (pos - searchBufferSize < 0) {
-            return Arrays.copyOfRange(testData, 0, pos);
+            return Arrays.copyOfRange(dataList.get(0), 0, pos);
         } else {
-            return Arrays.copyOfRange(testData, pos - searchBufferSize, pos);
+            return Arrays.copyOfRange(dataList.get(0), pos - searchBufferSize, pos);
         }
     }
 
     // Method to process the data in the look-ahead window (dealing with end cases)
     public static byte[] getWindow() {
         if (pos + lookAheadSize > FILESIZE) {
-            return Arrays.copyOfRange(testData, pos, (int)FILESIZE);
+            return Arrays.copyOfRange(dataList.get(0), pos, (int)FILESIZE);
         } else {
-            return Arrays.copyOfRange(testData, pos, pos + lookAheadSize);
+            return Arrays.copyOfRange(dataList.get(0), pos, pos + lookAheadSize);
         }
     }
 
@@ -93,6 +94,16 @@ class LZJ4Encoder {
     public static ArrayList<Integer> findMatches(byte[] mainArr, byte[] subArr) {
         ArrayList<Integer> matches = new ArrayList<Integer>();
         // TODO: implement a matching system for byte arrays
+        for (int i = 0; i < mainArr.length; i++) {
+            // Checking if the first value matches
+            if (mainArr[i] == subArr[0]) { 
+                // This will create a temporary sub array
+                byte[] temp = Arrays.copyOfRange(mainArr, i, (subArr.length + i));
+                if (Arrays.equals(temp, subArr)) {
+                    matches.add(i);
+                }
+            }
+        }
         return matches;
     }
 
@@ -106,9 +117,11 @@ class LZJ4Encoder {
         String hiToken = String.format("%4s", Integer.toBinaryString(newSymbolsCount)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
+        
         // Converting the binary string token to Hexadecimal
         int tokenDec = Integer.parseInt(token, 2);
         token = Integer.toHexString(tokenDec);
+        System.out.println(token);
 
         // Processing the symbols
         byte[] symbolsArr = Arrays.copyOfRange(symbols, 0, newSymbolsCount);
@@ -159,12 +172,11 @@ class LZJ4Encoder {
 
         while (pos < FILESIZE - 5) {
 
-            byte[] bestMatch = new byte[100000];
+            byte[] bestMatch = new byte[0];
             int matchLen = 0;
-            byte[] subArr = new byte[100000];
+            byte[] subArr;
             searchBuffer = getBuffer();
 
-            // TODO: lookAheadWindow.length will output 100000, so need to fix this.
             for (int c = 0; c < lookAheadWindow.length; c++) {
                 // System.out.println("pos: " + pos);
                 newSymbolsCount++;
@@ -177,28 +189,27 @@ class LZJ4Encoder {
 
                 lookAheadWindow = getWindow();
 
-                // TODO: lookAheadWindow.length will output 100000, so need to fix this.
                 if (lookAheadWindow.length <= 0) {
                     System.out.println("End of window reached");
                     break;
                 }
 
                 searchBuffer = getBuffer();
-                //System.out.println("buffer: " + buffer);
-                //System.out.println("window: " + window);
+                //System.out.println("buffer: " + Arrays.toString(searchBuffer));
+                //System.out.println("window: " + Arrays.toString(lookAheadWindow));
                 
-               subArr = Arrays.copyOfRange(lookAheadWindow, 0, c); // get the current substring
-                //System.out.println("subStr: " + subStr);
+                subArr = Arrays.copyOfRange(lookAheadWindow, 0, c); // get the current substring
+                //System.out.println("subArr: " + Arrays.toString(subArr));
 
                 ArrayList<Integer> matches = findMatches(searchBuffer, subArr);
-
-                // If there are no matches, reset the subStr variable and continue
+                
+                // If there are no matches, reset the subArr variable and continue
                 if (matches.isEmpty()) {
-                    subArr = new byte[100000];;
+                    subArr = new byte[0];
                     pos++;
                     continue;
                 } else {
-                    //System.out.println("Match found at index " + matches.get(0));
+                    System.out.println("Match found at index " + matches.get(0));
                     // If the length of the current best match is less than the length of the
                     // current substring
                     matchLen = subArr.length;
@@ -206,8 +217,8 @@ class LZJ4Encoder {
                         // Replace the best match
                         bestMatch = subArr;
                         createDataBlock(matchLen, bestMatch, matches, newSymbolsCount);
-                        System.out.println("pos : " + pos + ", best match: " + bestMatch +  ", match length: " + matchLen);
-                        System.out.println("matches indexes: " + matches.toString());
+                        //System.out.println("pos : " + pos + ", best match: " + Arrays.toString(bestMatch) +  ", match length: " + matchLen);
+                        //System.out.println("matches indexes: " + matches.toString());
                         // Symbols since the previous match
                         // As matchLen number of symbols is appended after the literals in the token
                         // we minus matchLen number of new Symbols
