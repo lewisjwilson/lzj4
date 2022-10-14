@@ -30,7 +30,7 @@ class LZJ4Encoder {
     static int searchBufferSize = 100000; // temporarily - to encode all data at once
 
     // Initialize the number of new symbols used for token value in lz4 data block
-    public static int newSymbolsCount = 0;
+    public static int newSymbolsCount = -1;
 
     // Cursor position initialization
     public static int pos = 0;
@@ -90,14 +90,13 @@ class LZJ4Encoder {
         }
     }
 
-    // Method to find the indexes of substring matches in a string
+    // Method to find the indexes of subarray matches in an array
     public static ArrayList<Integer> findMatches(byte[] mainArr, byte[] subArr) {
         ArrayList<Integer> matches = new ArrayList<Integer>();
-        // TODO: implement a matching system for byte arrays
         for (int i = 0; i < mainArr.length; i++) {
-            // Checking if the first value matches
+            // Check if the first value matches
             if (mainArr[i] == subArr[0]) { 
-                // This will create a temporary sub array
+                // Create temporary sub array
                 byte[] temp = Arrays.copyOfRange(mainArr, i, (subArr.length + i));
                 if (Arrays.equals(temp, subArr)) {
                     matches.add(i);
@@ -121,7 +120,6 @@ class LZJ4Encoder {
         // Converting the binary string token to Hexadecimal
         int tokenDec = Integer.parseInt(token, 2);
         token = Integer.toHexString(tokenDec);
-        System.out.println(token);
 
         // Processing the symbols
         byte[] symbolsArr = Arrays.copyOfRange(symbols, 0, newSymbolsCount);
@@ -154,18 +152,23 @@ class LZJ4Encoder {
     public static void endOfData() {
         try {
             int posMax = pos + 5;
+            System.out.print("Final 5 bytes: [");
             while (pos < posMax) {
                 outStream.write((byte) testData[pos - 1]);
+                System.out.print(testData[pos - 1] + ", ");
                 pos++;
             }
+            System.out.print("]\n");
             outStream.write((byte) 0);
             outStream.write((byte) 0);
             outStream.write((byte) 0);
             outStream.write((byte) 0);
+            System.out.println("End Marker: [00, 00, 00, 00]");
         } catch (IOException e) {
             System.out.println("LZJ4Encoder.endOfData()");
             e.printStackTrace();
         }
+        
     }
 
     public static void dataTraverse(byte[] lookAheadWindow) {
@@ -209,7 +212,7 @@ class LZJ4Encoder {
                     pos++;
                     continue;
                 } else {
-                    System.out.println("Match found at index " + matches.get(0));
+                    //System.out.println("Match found at index " + matches.get(0));
                     // If the length of the current best match is less than the length of the
                     // current substring
                     matchLen = subArr.length;
