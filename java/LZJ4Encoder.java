@@ -3,6 +3,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.lang.Integer;
+
 
 class LZJ4Encoder extends FileOperations {
 
@@ -70,6 +72,17 @@ class LZJ4Encoder extends FileOperations {
         return matches;
     }
 
+    private static void magicNumber(){
+        byte[] magic = {0x04, 0x22, 0x4d, 0x18};
+        try {
+            outStream.write(magic);
+        } catch (IOException e) {
+            System.out.println("LZJ4Encoder.magicNumber()");
+            e.printStackTrace();
+        }
+    }
+    
+
     private static void createDataBlock(int matchLength, byte[] symbols, ArrayList<Integer> matches,
             int newSymbolsCount) {
 
@@ -81,9 +94,11 @@ class LZJ4Encoder extends FileOperations {
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
         
-        // Converting the binary string token to Hexadecimal
+        // Converting the binary string token to decimal
         int tokenDec = Integer.parseInt(token, 2);
-        token = Integer.toHexString(tokenDec);
+
+        // The token value in decimal (will be converted to hex on writing)
+        System.out.println(tokenDec);
 
         // Processing the symbols
         byte[] symbolsArr = Arrays.copyOfRange(symbols, 0, newSymbolsCount);
@@ -97,7 +112,7 @@ class LZJ4Encoder extends FileOperations {
         String offsetByte1 = offsetHex.substring(2, 4);
         String offsetByte2 = offsetHex.substring(0, 2);
 
-        lz4block.setToken(token);
+        lz4block.setToken((byte)tokenDec);
         lz4block.setSymbols(symbolsArr);
         lz4block.setOffset(offsetByte1, offsetByte2);
 
@@ -197,9 +212,6 @@ class LZJ4Encoder extends FileOperations {
             }
 
         }
-        endOfData();
-        //System.out.println("End of data reached!");
-
     }
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -219,9 +231,15 @@ class LZJ4Encoder extends FileOperations {
         // Create data stream for writing to file
         outStream = FileOperations.createOutputStream(outPathStr);
 
+        // Writing data
+        magicNumber();
         dataTraverse(lookAheadWindow);
+        endOfData();
+        System.out.println("End of data reached!");
 
         FileOperations.closeOutputStream(outStream);
+
+        System.out.println("File \"" + outPathStr + "\" successfully written.");
 
     }
 

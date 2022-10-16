@@ -34,7 +34,6 @@ public class FileOperations {
             System.out.println("LZJ4Encoder.main()");
             e.printStackTrace();
         }
-        System.out.println("File \"" + stream + "\" successfully written.");
     }
 
     public static ArrayList<byte[]> importRawData(String source){

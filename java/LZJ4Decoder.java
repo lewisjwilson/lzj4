@@ -9,14 +9,14 @@ import java.io.FileInputStream;
 
 public class LZJ4Decoder {
 
-    public static String pathStr = "abbccabbcccabbaabcc.lz4";
+    public static String pathStr = "out.lz4";
     public static Path PATH;
     public static long FILESIZE;
     public static ArrayList<byte[]> dataList = new ArrayList<>();
     public static ArrayList<byte[]> outputList = new ArrayList<>();
     public static int pos;
     
-     public static boolean magicNumber(){
+    public static boolean magicNumber(){
         byte[] magic = {0x04, 0x22, 0x4d, 0x18};
         byte[] firstFour = new byte[4];
         try{
@@ -87,9 +87,14 @@ public class LZJ4Decoder {
         // -4: Ending Marker should be 00 00 00 00
         while(pos<FILESIZE-5-4){
             String token = Integer.toHexString(dataList.get(0)[pos] & 0xFF);
+            // value of the token in hex
             token = (token.length() < 2 ? "0" + token : token);
-            int noOfSymbols = Integer.parseInt(token.substring(0,1), 16);
-            int matchLen = Integer.parseInt(token.substring(1,2), 16) + 4;
+
+            
+            int noOfSymbols = Integer.parseInt(token.substring(0,1), 10);
+            int matchLen = Integer.parseInt(token.substring(1,2), 10) + 4;
+
+            System.out.println("pos: " + pos + " byte: " + token + " " + noOfSymbols);
              
             pos++;
             
@@ -97,6 +102,7 @@ public class LZJ4Decoder {
             for(int i=0; i<noOfSymbols; i++){
                 outData[currentByte] = dataList.get(0)[pos];
                 //System.out.println(outData[currentByte]);
+                System.out.println("pos: " + pos + " byte: " + outData[currentByte]);
                 currentByte++;
                 pos++;
             }
@@ -105,6 +111,8 @@ public class LZJ4Decoder {
             String offsetStr = Integer.toHexString(dataList.get(0)[pos+1] & 0xFF);
             offsetStr += Integer.toHexString(dataList.get(0)[pos] & 0xFF);
             int offset = Integer.parseInt(offsetStr, 16);
+
+            System.out.println("pos: " + pos + " byte: " + offsetStr);
             
             pos += 2;
             

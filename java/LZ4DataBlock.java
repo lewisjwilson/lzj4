@@ -1,12 +1,12 @@
 import java.util.Arrays;
 
 public class LZ4DataBlock {
-    private String token;
+    private byte token;
     private byte[] symbols;
     private String offset;
 
     // Getters
-    public String getToken() {
+    public byte getToken() {
         return token;
     }
 
@@ -36,7 +36,7 @@ public class LZ4DataBlock {
     }
 
     // Setters
-    public void setToken(String token) {
+    public void setToken(byte token) {
         this.token = token;
     }
 
