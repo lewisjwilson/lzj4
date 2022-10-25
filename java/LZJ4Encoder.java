@@ -8,7 +8,7 @@ import java.lang.Integer;
 
 class LZJ4Encoder extends FileOperations {
 
-    private static String sourcePathStr = "../test_files/abbccabbcccabbaabcc.txt";
+    private static String sourcePathStr = "test_files/a20.txt";
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -127,32 +127,13 @@ class LZJ4Encoder extends FileOperations {
 
     }
 
-    // Appending 5 ending literals (in line with spec) and bytes (value 0)
-    public static void endOfData() {
-        try {
-            int posMax = pos + 5;
-            System.out.print("Final 5 bytes: [");
-            while (pos < posMax) {
-                outStream.write((byte) dataList.get(0)[pos - 1]);
-                System.out.print(dataList.get(0)[pos - 1] + ", ");
-                pos++;
-            }
-            System.out.print("]\n");
-            outStream.write((byte) 0);
-            outStream.write((byte) 0);
-            outStream.write((byte) 0);
-            outStream.write((byte) 0);
-            System.out.println("End Marker: [00, 00, 00, 00]");
-        } catch (IOException e) {
-            System.out.println("LZJ4Encoder.endOfData()");
-            e.printStackTrace();
-        }
-        
+    private static boolean lastFiveBytes(){
+        return pos >= FILESIZE - 5;
     }
 
     public static void dataTraverse(byte[] lookAheadWindow) {
 
-        while (pos < FILESIZE - 5) {
+        while (!lastFiveBytes()) {
 
             byte[] bestMatch = new byte[0];
             int matchLen = 0;
@@ -191,10 +172,13 @@ class LZJ4Encoder extends FileOperations {
                     pos++;
                     continue;
                 } else {
+                    
+                    matchLen = subArr.length;
+                    
                     //System.out.println("Match found at index " + matches.get(0));
                     // If the length of the current best match is less than the length of the
                     // current substring
-                    matchLen = subArr.length;
+                    
                     if (bestMatch.length < matchLen) {
                         // Replace the best match
                         bestMatch = subArr;
@@ -212,6 +196,29 @@ class LZJ4Encoder extends FileOperations {
             }
 
         }
+    }
+    
+    // Appending 5 ending literals (in line with spec) and bytes (value 0)
+    public static void endOfData() {
+        try {
+            int posMax = pos + 5;
+            System.out.print("Final 5 bytes: [");
+            while (pos < posMax) {
+                outStream.write((byte) dataList.get(0)[pos - 1]);
+                System.out.print(dataList.get(0)[pos - 1] + ", ");
+                pos++;
+            }
+            System.out.print("]\n");
+            outStream.write((byte) 0);
+            outStream.write((byte) 0);
+            outStream.write((byte) 0);
+            outStream.write((byte) 0);
+            System.out.println("End Marker: [00, 00, 00, 00]");
+        } catch (IOException e) {
+            System.out.println("LZJ4Encoder.endOfData()");
+            e.printStackTrace();
+        }
+        
     }
 
     public static void main(String[] args) throws FileNotFoundException {
