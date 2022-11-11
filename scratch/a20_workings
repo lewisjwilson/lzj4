@@ -1,0 +1,38 @@
+Uncompressed:  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a  a
+Position:      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+
+
+Compressing:
+
+    data = ""
+    pos = 1
+
+    Magic: 04 22 4d 18
+
+	Block 1:
+		Requirement: match length >= 4
+            pos = 1: no matches >= 4 (offset must be at least 1)
+            pos = 2: Match found from pos 1-14 (final 5 bytes must be uncompressed)
+
+        Literals: (pos 2): "a"
+        Literals length: 1
+
+        Match length: (pos 1-14): 15
+        Offset: current_pos(2) - match_pos(1) = 1 (01 00 - Little Endian)
+
+        CAREFUL!!! match length > offset
+
+        Creating block:
+            Token = 1B (Literals length, match length (-4)
+            Literals = "a" (61)
+            Offset: 01 00
+
+        LZ4 Block 1: [1B 61 01 00]
+
+    data = [ 04 22 4d 18 1B 61 01 00 ]
+
+    Uncompressed = "aaaaa" (61 61 61 61 61)
+
+    Ending marker: [ 00 00 00 00 ]
+
+	Output LZ4 data: [ 04 22 4d 18 1B 61 01 00 61 61 61 61 61 00 00 00 00 ]

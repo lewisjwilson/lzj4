@@ -1,0 +1,112 @@
+Uncompressed:  a  b  b  c  c  a  b  b  c  c  c  a  b  b  a  a  b  c  c
+Position:      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
+
+Compressed: 04 22 4d 18 51 61 62 62 63 63 05 00 00 06 00 61 61 62 63 63 00 00 00 00
+
+
+
+Compressing:
+
+	data = ""
+	pos = 1
+
+	Magic: 04 22 4d 18
+
+	Block 1:
+		Requirement: match length >= 4
+			pos = 1: No matches >= 4
+			pos = 2: No matches >= 4
+			pos = 3: No matches >= 4
+			pos = 4: No matches >= 4
+			pos = 5: No matches >= 4
+			pos = 6: Match found from pos 1-5
+
+		
+		Literals: (pos 1-5): "abbcc"
+		Literals length: 5
+		
+		Match length: (pos 6-11) = 5
+		Offset: current_pos(6) - match_pos(1) = 5 (05 00 - Little Endian)
+
+		Creating block:
+			Token = 51 (Literals Length, Match Length (-4))
+			Literals = "abbcc" (61 62 62 63 63 - Hex)
+			Offset = 05 00
+
+		LZ4 Block 1 = [51 61 62 62 63 63 05 00]
+
+	data = [ 04 22 4d 18 51 61 62 62 63 63 05 00 ]
+
+	pos = pos(6) + match length(5) = 11
+	pos = 11
+
+	Block 2:
+		Requirement: match length >= 4
+			pos = 11: Match found from pos 5-8
+
+		Literals (none extra to add): ""
+		Literals length: 0
+
+		Match length: (pos 11-15) = 4
+		Offset: current_pos(11) - match_pos(5) = 6 (06 00 - Little Endian)
+
+		Creating block:
+			Token = 00
+			Literals = ""
+			Offset = 06 00
+
+		LZ4 Block 2 = [00 06 00]
+
+	data = [ 04 22 4d 18 51 61 62 62 63 63 05 00 00 06 00 ]
+
+	pos = pos(11) + match length(4) = 15
+
+	Uncompressed: "aabcc" (61 61 62 63 63)
+
+	Ending marker: [ 00 00 00 00 ]
+
+	Output LZ4 data: [ 04 22 4d 18 51 61 62 62 63 63 05 00 00 06 00 61 61 62 63 63 00 00 00 00 ]
+
+Decompressing:
+
+	data = ""
+
+	Magic: 04 22 4d 18
+
+	Block 1:
+		Token: 51
+			Literals: 5
+			Match_length: 1(+4) = 5
+
+		Literals: 61 62 62 63 63 (abbcc)
+			data = "abbcc"
+		
+		Offset (back from current pos): 05 00 (little endian)
+			Decimal value: 5
+
+		Reading offset from current data:
+			data = "abbccabbcc"
+
+	Block 2:
+		Token: 00
+			Literals: 0
+			Match Length: 0(+4) = 4
+
+		Literals: ""
+			data = "abbccabbcc"
+		
+		Offset: 06 00
+			Decimal value: 6
+		
+		Reading offset from current data:
+			data = "abbccabbcccabb"
+
+	Block 3:
+		Final 5 bytes - uncompressed.
+		
+		data = "abbccabbcccabbaabcc"
+
+	Ending Marker: 00 00 00 00
+
+
+	Decompressed data: "abbccabbcccabbaabcc"

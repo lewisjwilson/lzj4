@@ -8,7 +8,10 @@ import java.lang.Integer;
 
 class LZJ4Encoder extends FileOperations {
 
-    private static String sourcePathStr = "test_files/a20.txt";
+    // Initiate the lz4 data block
+    private static LZ4DataBlock lz4block = new LZ4DataBlock();
+
+    private static String sourcePathStr = "/home/lewis/lzj4/test_files/abbccabbcccabbaabcc.txt";
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -25,7 +28,7 @@ class LZJ4Encoder extends FileOperations {
     static int searchBufferSize = 100000; // temporarily - to encode all data at once
 
     // Initialize the number of new symbols used for token value in lz4 data block
-    public static int newSymbolsCount = -1;
+    public static int literalsLength = -1;
 
     // Cursor position initialization
     public static int pos = 0;
@@ -86,22 +89,24 @@ class LZJ4Encoder extends FileOperations {
     private static void createDataBlock(int matchLength, byte[] symbols, ArrayList<Integer> matches,
             int newSymbolsCount) {
 
-        // Initiate the lz4 data block
-        LZ4DataBlock lz4block = new LZ4DataBlock();
-
         // Creating the token
         String hiToken = String.format("%4s", Integer.toBinaryString(newSymbolsCount)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
         
         // Converting the binary string token to decimal
+        System.out.println(" new symbols: " + newSymbolsCount);
+        System.out.println(" match len: " + matchLength);
+
         int tokenDec = Integer.parseInt(token, 2);
 
         // The token value in decimal (will be converted to hex on writing)
-        System.out.println(tokenDec);
+        // System.out.println(tokenDec);
 
         // Processing the symbols
         byte[] symbolsArr = Arrays.copyOfRange(symbols, 0, newSymbolsCount);
+
+        System.out.println(Arrays.toString(symbolsArr));
 
         // Processing the offset
         String offset = String.format("%16s", Integer.toBinaryString(searchBuffer.length - matches.get(0))).replace(' ',
@@ -134,21 +139,17 @@ class LZJ4Encoder extends FileOperations {
     public static void dataTraverse(byte[] lookAheadWindow) {
 
         while (!lastFiveBytes()) {
-
             byte[] bestMatch = new byte[0];
             int matchLen = 0;
-            byte[] subArr;
+            byte[] potentialMatch;
             searchBuffer = getBuffer();
 
-            for (int c = 0; c < lookAheadWindow.length; c++) {
-                // System.out.println("pos: " + pos);
-                newSymbolsCount++;
+            int c = 0;
 
-                // Matches must be >= 4
-                if (c < 4) {
-                    pos++;
-                    continue;
-                }
+            while(c < lookAheadWindow.length) {
+                System.out.println("pos: " + pos);
+
+                literalsLength++;
 
                 lookAheadWindow = getWindow();
 
@@ -158,37 +159,66 @@ class LZJ4Encoder extends FileOperations {
                 }
 
                 searchBuffer = getBuffer();
-                //System.out.println("buffer: " + Arrays.toString(searchBuffer));
-                //System.out.println("window: " + Arrays.toString(lookAheadWindow));
+                // System.out.println("buffer: " + Arrays.toString(searchBuffer));
+                // System.out.println("window: " + Arrays.toString(lookAheadWindow));
                 
-                subArr = Arrays.copyOfRange(lookAheadWindow, 0, c); // get the current substring
-                //System.out.println("subArr: " + Arrays.toString(subArr));
+                potentialMatch = Arrays.copyOfRange(lookAheadWindow, 0, c); // get the current substring
+                // System.out.println("c: " + c);
 
-                ArrayList<Integer> matches = findMatches(searchBuffer, subArr);
+                // In the case that the first literal is checked after a data block has been created
+                // Required so that current literal can be searched for in buffer
+                if(potentialMatch.length <= 0 && searchBuffer.length > 0){
+                    potentialMatch = Arrays.copyOfRange(lookAheadWindow, 0, c+1); // get the current substring
+                }
+
+                // System.out.println(lookAheadWindow.length);
+                // System.out.println("buffer: " + Arrays.toString(searchBuffer));
+                // System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
+
+               
+                c++;
+
+                ArrayList<Integer> matches = findMatches(searchBuffer, potentialMatch);
+                // System.out.println("symbol: " + dataList.get(0)[pos]+ " , at pos: "+ pos);
+                // System.out.println("matches: " + matches);
                 
                 // If there are no matches, reset the subArr variable and continue
                 if (matches.isEmpty()) {
-                    subArr = new byte[0];
+                    potentialMatch = new byte[0];
                     pos++;
                     continue;
                 } else {
                     
-                    matchLen = subArr.length;
-                    
-                    //System.out.println("Match found at index " + matches.get(0));
+                    matchLen = potentialMatch.length;
+                    // System.out.println("Match found at index " + matches.get(0));
                     // If the length of the current best match is less than the length of the
                     // current substring
+
+                    if(matchLen < 4){
+                        continue;
+                    }
                     
                     if (bestMatch.length < matchLen) {
                         // Replace the best match
-                        bestMatch = subArr;
-                        createDataBlock(matchLen, bestMatch, matches, newSymbolsCount);
-                        //System.out.println("pos : " + pos + ", best match: " + Arrays.toString(bestMatch) +  ", match length: " + matchLen);
-                        //System.out.println("matches indexes: " + matches.toString());
-                        // Symbols since the previous match
+                        bestMatch = potentialMatch;
+                        createDataBlock(matchLen, bestMatch, matches, literalsLength);
+                        // System.out.println("pos : " + pos + ", best match: " + Arrays.toString(bestMatch) +  ", match length: " + matchLen);
+                        // System.out.println("matches indexes: " + matches.toString());
                         // As matchLen number of symbols is appended after the literals in the token
                         // we minus matchLen number of new Symbols
-                        newSymbolsCount = -matchLen;
+                        literalsLength = -matchLen;
+
+                        // This if statement changes the position of the cursor
+                        // and also acounts for if no symbols were copied to the previous block
+                        if(lz4block.getSymbols().length <= 0){
+                            pos = pos + matchLen + 1;
+                        } else {
+                            pos = pos + matchLen;
+                        }
+                        
+                        System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , symbols: " + lz4block.getSymbols().length);
+                        
+
                         break;
                     }
                 }
