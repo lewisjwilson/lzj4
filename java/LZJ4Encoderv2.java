@@ -72,15 +72,13 @@ class LZJ4Encoderv2 extends FileOperations {
         // System.out.println(tokenDec);
 
         // Processing the offset
-        String offset = String.format("%16s", Integer.toBinaryString(matchLength - matches.get(0))).replace(' ',
+        String offset = String.format("%16s", Integer.toBinaryString(startOfLiterals - matches.get(0))).replace(' ',
                 '0');
         // Converting binary string offset to Hexadecimal
         int offsetDec = Integer.parseInt(offset, 2);
         String offsetHex = String.format("%4s", Integer.toHexString(offsetDec)).replace(' ', '0');
         String offsetByte1 = offsetHex.substring(2, 4);
         String offsetByte2 = offsetHex.substring(0, 2);
-        System.out.println(offsetByte1);
-        System.out.println(offsetByte2);
 
 
         lz4block.setToken((byte)tokenDec);
@@ -171,6 +169,7 @@ class LZJ4Encoderv2 extends FileOperations {
 
                 if (literals.length <= matchLen) {
 
+                    System.out.println("start of literals: " + startOfLiterals);
                     createDataBlock(literals, startOfLiterals, matches, matchLen);
                     if(lz4block.getSymbols().length <= 0){
                         pos = pos + matchLen + 1;

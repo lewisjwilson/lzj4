@@ -26,8 +26,8 @@ public class LZ4DataBlock {
 
         System.arraycopy(symbols, 0, dataBlock, 1, symbols.length);
 
-        dataBlock[blockLen - 2] = Byte.valueOf(this.getOffset().substring(0, 2));
-        dataBlock[blockLen - 1] = Byte.valueOf(this.getOffset().substring(2, 4));
+        dataBlock[blockLen - 2] = Byte.parseByte(this.getOffset().substring(0, 2), 16);
+        dataBlock[blockLen - 1] = Byte.parseByte(this.getOffset().substring(2, 4), 16);
 
         System.out.println("Data Block: " + Arrays.toString(dataBlock));
 
