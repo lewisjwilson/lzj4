@@ -11,8 +11,8 @@ class LZJ4Encoderv2 extends FileOperations {
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    private static String sourcePathStr = "/home/lewis/lzj4/test_files/abbccabbcccabbaabcc.txt";
-    //private static String sourcePathStr = "/home/lewis/lzj4/test_files/a20";
+    // private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
+    private static String sourcePathStr = "test_files/a20";
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -54,16 +54,16 @@ class LZJ4Encoderv2 extends FileOperations {
         return matches;
     }
 
-    private static void createDataBlock(int matchLength, byte[] symbols, ArrayList<Integer> matches,
-            int newSymbolsCount) {
+    private static void createDataBlock(byte[] literals, int startOfLiterals, ArrayList<Integer> matches,
+            int matchLength) {
 
         // Creating the token
-        String hiToken = String.format("%4s", Integer.toBinaryString(newSymbolsCount)).replace(' ', '0');
+        String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
         
         // Converting the binary string token to decimal
-        System.out.println(" new symbols: " + newSymbolsCount);
+        System.out.println(" new symbols: " + literals.length);
         System.out.println(" match len: " + matchLength);
 
         int tokenDec = Integer.parseInt(token, 2);
@@ -71,22 +71,20 @@ class LZJ4Encoderv2 extends FileOperations {
         // The token value in decimal (will be converted to hex on writing)
         // System.out.println(tokenDec);
 
-        // Processing the symbols
-        byte[] symbolsArr = Arrays.copyOfRange(symbols, 0, newSymbolsCount);
-
-        System.out.println(Arrays.toString(symbolsArr));
-
         // Processing the offset
-        String offset = String.format("%16s", Integer.toBinaryString(dataList.get(0).length - matches.get(0))).replace(' ',
+        String offset = String.format("%16s", Integer.toBinaryString(matchLength - matches.get(0))).replace(' ',
                 '0');
         // Converting binary string offset to Hexadecimal
         int offsetDec = Integer.parseInt(offset, 2);
         String offsetHex = String.format("%4s", Integer.toHexString(offsetDec)).replace(' ', '0');
         String offsetByte1 = offsetHex.substring(2, 4);
         String offsetByte2 = offsetHex.substring(0, 2);
+        System.out.println(offsetByte1);
+        System.out.println(offsetByte2);
+
 
         lz4block.setToken((byte)tokenDec);
-        lz4block.setSymbols(symbolsArr);
+        lz4block.setSymbols(literals);
         lz4block.setOffset(offsetByte1, offsetByte2);
 
         byte[] dataBlock = lz4block.createDataBlock();
@@ -107,11 +105,13 @@ class LZJ4Encoderv2 extends FileOperations {
     public static void dataTraverse(byte[] data) {
 
         byte[] literals = new byte[0];
-        int startOfLiterals = pos;
         int matchLen = 0;
         byte[] potentialMatch;
 
-        while (!lastFiveBytes()) {
+        // For the entirety of the data (minus the trailing 5 bytes)
+        for (int i = 0; i < FILESIZE-5; i++) {
+
+            int startOfLiterals = pos;
             
             literals = Arrays.copyOf(literals, literals.length + 1); // adjusting the size of the literals array
             literals[literals.length - 1] = data[pos]; // append literal
@@ -125,7 +125,6 @@ class LZJ4Encoderv2 extends FileOperations {
             ArrayList<Integer> matches = findMatches(potentialMatch, literals);
 
             System.out.println("matches (pos): " + matches);
-            System.out.println("start of literals: " + startOfLiterals);
 
 
             // If there are no matches, reset the potentialMatch variable and continue
@@ -134,19 +133,24 @@ class LZJ4Encoderv2 extends FileOperations {
                 System.out.println("here");
                 literals = new byte[0];
                 pos++;
-                startOfLiterals = pos;
                 continue;
 
             } else {
 
+                // this variable takes over in case that multiple matches are found past pos
+                int window_counter = pos;
+
                 while(matches.size() > 0) {
-                    pos++;
+                    window_counter++;
+                    if(window_counter >= FILESIZE - 5){
+                        break;
+                    }
                     System.out.println("last 5 bytes? " + lastFiveBytes());
                     
-                    literals = Arrays.copyOf(literals, literals.length + 1); // adjusting the size of the literals array
-                    literals[literals.length - 1] = data[pos]; // append literal
+                    //literals = Arrays.copyOf(literals, literals.length + 1); // adjusting the size of the literals array
+                    //literals[literals.length - 1] = data[pos]; // append literal
 
-                    potentialMatch = Arrays.copyOfRange(data, 0, pos); // get data on LHS from current pos
+                    potentialMatch = Arrays.copyOfRange(data, 0, window_counter); // get data on LHS from current pos
 
                     System.out.println("\npos: " + pos);
                     System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
@@ -155,10 +159,9 @@ class LZJ4Encoderv2 extends FileOperations {
                     matches = findMatches(potentialMatch, literals);
 
                     System.out.println("matches (pos): " + matches);
-                    System.out.println("start of literals: " + startOfLiterals);
 
                 }
-                                    
+                                  
                 matchLen = potentialMatch.length;
                 
                 if(matchLen < 4){
@@ -168,15 +171,17 @@ class LZJ4Encoderv2 extends FileOperations {
 
                 if (literals.length <= matchLen) {
 
-                    createDataBlock(matchLen, literals, matches, literals.length);
+                    createDataBlock(literals, startOfLiterals, matches, matchLen);
                     if(lz4block.getSymbols().length <= 0){
                         pos = pos + matchLen + 1;
                     } else {
                         pos = pos + matchLen;
                     }
                     
-                    System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , symbols: " + lz4block.getSymbols().length);
+                    System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
                     
+                    matchLen = 0;
+
                     break;
                 }
             }
