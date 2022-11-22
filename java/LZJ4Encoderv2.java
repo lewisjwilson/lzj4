@@ -3,6 +3,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.lang.Integer;
 
 
@@ -11,8 +13,8 @@ class LZJ4Encoderv2 extends FileOperations {
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    // private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
-    private static String sourcePathStr = "test_files/a20";
+    private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
+    // private static String sourcePathStr = "test_files/a20";
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -39,22 +41,23 @@ class LZJ4Encoderv2 extends FileOperations {
     }
 
     // Method to find the indexes of subarray matches in an array
-    public static ArrayList<Integer> findMatches(byte[] mainArr, byte[] subArr) {
-        ArrayList<Integer> matches = new ArrayList<Integer>();
-        for (int i = 0; i < mainArr.length; i++) {
+    public static HashMap<Integer, Integer> findMatches(byte[] mainArr, byte[] subArr, int tilPos) {
+        System.out.println("Matching: " + Arrays.toString(subArr) + "...\n");
+        HashMap<Integer, Integer> matches = new HashMap<Integer, Integer>();
+        for (int i = 0; i < tilPos; i++) {
             // Check if the first value matches
             if (mainArr[i] == subArr[0]) { 
                 // Create temporary sub array
                 byte[] temp = Arrays.copyOfRange(mainArr, i, (subArr.length + i));
                 if (Arrays.equals(temp, subArr)) {
-                    matches.add(i);
+                    matches.put(i, subArr.length);
                 }
             }
         }
         return matches;
     }
 
-    private static void createDataBlock(byte[] literals, int startOfLiterals, ArrayList<Integer> matches,
+    private static void createDataBlock(byte[] literals, int startOfLiterals, int matchFromPosition,
             int matchLength) {
 
         // Creating the token
@@ -72,7 +75,7 @@ class LZJ4Encoderv2 extends FileOperations {
         // System.out.println(tokenDec);
 
         // Processing the offset
-        String offset = String.format("%16s", Integer.toBinaryString(startOfLiterals - matches.get(0))).replace(' ',
+        String offset = String.format("%16s", Integer.toBinaryString(startOfLiterals - matchFromPosition)).replace(' ',
                 '0');
         // Converting binary string offset to Hexadecimal
         int offsetDec = Integer.parseInt(offset, 2);
@@ -120,15 +123,12 @@ class LZJ4Encoderv2 extends FileOperations {
             System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
             System.out.println("literals: " + Arrays.toString(literals));
 
-            ArrayList<Integer> matches = findMatches(potentialMatch, literals);
+            HashMap<Integer, Integer> matches = findMatches(potentialMatch, literals, pos);
 
-            System.out.println("matches (pos): " + matches);
-
+            System.out.println("Match Position = MatchLength: " + matches);
 
             // If there are no matches, reset the potentialMatch variable and continue
             if (matches.isEmpty()) {
-
-                System.out.println("here");
                 literals = new byte[0];
                 pos++;
                 continue;
@@ -137,6 +137,7 @@ class LZJ4Encoderv2 extends FileOperations {
 
                 // this variable takes over in case that multiple matches are found past pos
                 int window_counter = pos;
+                HashMap<Integer, Integer> bestMatches = matches;
 
                 while(matches.size() > 0) {
                     window_counter++;
@@ -145,32 +146,45 @@ class LZJ4Encoderv2 extends FileOperations {
                     }
                     System.out.println("last 5 bytes? " + lastFiveBytes());
                     
-                    //literals = Arrays.copyOf(literals, literals.length + 1); // adjusting the size of the literals array
-                    //literals[literals.length - 1] = data[pos]; // append literal
-
-                    potentialMatch = Arrays.copyOfRange(data, 0, window_counter); // get data on LHS from current pos
+                    potentialMatch = Arrays.copyOf(potentialMatch, potentialMatch.length + 1);
+                    potentialMatch[potentialMatch.length - 1] = data[window_counter]; 
 
                     System.out.println("\npos: " + pos);
                     System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
-                    System.out.println("literals: " + Arrays.toString(literals));
 
-                    matches = findMatches(potentialMatch, literals);
+                    matches = findMatches(data, potentialMatch, window_counter);
 
-                    System.out.println("matches (pos): " + matches);
+                    // Prevents error calculating max on an empty hashmap
+                    if(matches.isEmpty()){
+                        System.out.println("No matches...");
+                        break;
+                    }
 
+                    // getting the max values in the current matches array and the current BEST matches array
+                    int matchesMax = Collections.max(matches.values());
+                    int bestMatchesMax = Collections.max(bestMatches.values());
+                    
+                    if(matchesMax > bestMatchesMax){
+                        bestMatches = matches;
+                    }
+        
+                    System.out.println("Match Position = MatchLength: " + matches);    
                 }
                                   
                 matchLen = potentialMatch.length;
-                
+                System.out.println("Best Match: " + bestMatches);
                 if(matchLen < 4){
+                    System.out.println("Match Length too short.");
                     pos++;
                     continue;
                 }
 
                 if (literals.length <= matchLen) {
 
+                    int matchAtPos = bestMatches.keySet().stream().findFirst().get();
+
                     System.out.println("start of literals: " + startOfLiterals);
-                    createDataBlock(literals, startOfLiterals, matches, matchLen);
+                    createDataBlock(literals, startOfLiterals, matchAtPos, matchLen);
                     if(lz4block.getSymbols().length <= 0){
                         pos = pos + matchLen + 1;
                     } else {
