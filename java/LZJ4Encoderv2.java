@@ -13,8 +13,9 @@ class LZJ4Encoderv2 extends FileOperations {
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
-    // private static String sourcePathStr = "test_files/a20";
+    // private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
+    private static String sourcePathStr = "/home/lewis/lzj4/test_files/a20";
+
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -60,6 +61,7 @@ class LZJ4Encoderv2 extends FileOperations {
     private static void createDataBlock(byte[] literals, int startOfLiterals, int matchFromPosition,
             int matchLength) {
 
+
         // Creating the token
         String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
@@ -75,7 +77,9 @@ class LZJ4Encoderv2 extends FileOperations {
         // System.out.println(tokenDec);
 
         // Processing the offset
+
         String offset = String.format("%16s", Integer.toBinaryString(startOfLiterals - matchFromPosition)).replace(' ',
+
                 '0');
         // Converting binary string offset to Hexadecimal
         int offsetDec = Integer.parseInt(offset, 2);
@@ -181,10 +185,12 @@ class LZJ4Encoderv2 extends FileOperations {
 
                 if (literals.length <= matchLen) {
 
+
                     int matchAtPos = bestMatches.keySet().stream().findFirst().get();
 
                     System.out.println("start of literals: " + startOfLiterals);
                     createDataBlock(literals, startOfLiterals, matchAtPos, matchLen);
+
                     if(lz4block.getSymbols().length <= 0){
                         pos = pos + matchLen + 1;
                     } else {
