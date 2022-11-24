@@ -38,24 +38,50 @@ class LZJ4Encoderv2 extends FileOperations {
         }
     }
 
-    // Method to find the indexes of subarray matches in an array
-    public static ArrayList<Integer> findMatches(byte[] mainArr, byte[] subArr) {
-        ArrayList<Integer> matches = new ArrayList<Integer>();
-        for (int i = 0; i < mainArr.length; i++) {
+    // Get position of match of item in array
+    // Output : ArrayList<{startOfMatch, lengthOfMatch}>
+    public static ArrayList<int[]> findFirstMatch(byte[] array, byte literal) {
+        ArrayList<int[]> matches = new ArrayList<>();
+        for (int i = 0; i < array.length; i++) {
             // Check if the first value matches
-            if (mainArr[i] == subArr[0]) { 
-                // Create temporary sub array
-                byte[] temp = Arrays.copyOfRange(mainArr, i, (subArr.length + i));
-                if (Arrays.equals(temp, subArr)) {
-                    matches.add(i);
-                }
+            if (array[i] == literal) { 
+                matches.add(new int[]{i, 1});
             }
         }
         return matches;
     }
 
-    private static void createDataBlock(byte[] literals, int startOfLiterals, ArrayList<Integer> matches,
-            int matchLength, int currentPos) {
+    // Find the best matches avaliable from the current matches array
+    public static int[] findBestMatches(ArrayList<int[]> matches, int checkFromPosition) {
+        byte[] window = dataList.get(0);
+        int lit_pos = checkFromPosition;
+        int[] bestMatch = new int[]{0, 0};
+     
+        // while there is more than one best match
+        for (int[] match : matches) {
+            int match_pos = match[0];
+            int best = 1;
+            
+            while(lit_pos < FILESIZE - 5){
+                if(window[lit_pos] == window[match_pos]){
+                    lit_pos++;
+                    best++;
+                } else { 
+                    break;
+                }
+            }
+            if(best > bestMatch[1]){
+                bestMatch[0] = match_pos;
+                bestMatch[1] = best-1; //taking back the increment from the last loop cycle
+            }
+            lit_pos = checkFromPosition;
+        }
+        System.out.println(Arrays.toString(bestMatch));
+        return bestMatch;
+    }
+    
+
+    private static void createDataBlock(byte[] literals, int startOfLiterals, int startOfMatch, int matchLength) {
 
         // Creating the token
         String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
@@ -72,8 +98,14 @@ class LZJ4Encoderv2 extends FileOperations {
         // System.out.println(tokenDec);
 
         // Processing the offset
-        String offset = String.format("%16s", Integer.toBinaryString(currentPos - matchLength)).replace(' ',
+        String offset = "";
+        if(matchLength > pos){
+            offset = String.format("%16s", Integer.toBinaryString(pos)).replace(' ',
+            '0');
+        } else {
+            offset = String.format("%16s", Integer.toBinaryString(pos - matchLength)).replace(' ',
                 '0');
+        }
         // Converting binary string offset to Hexadecimal
         int offsetDec = Integer.parseInt(offset, 2);
         String offsetHex = String.format("%4s", Integer.toHexString(offsetDec)).replace(' ', '0');
@@ -96,23 +128,19 @@ class LZJ4Encoderv2 extends FileOperations {
 
     }
 
-    private static boolean lastFiveBytes(){
-        return pos >= FILESIZE - 5;
-    }
-
     public static void dataTraverse(byte[] data) {
 
-        byte[] literals = new byte[0];
         int matchLen = 0;
         byte[] potentialMatch;
+        byte[] literals = new byte[0];
 
         // For the entirety of the data (minus the trailing 5 bytes)
-        for (int i = 0; i < FILESIZE-5; i++) {
+        for (int i = 0; i < FILESIZE - 5; i++) {
 
             int startOfLiterals = pos;
             
-            literals = Arrays.copyOf(literals, literals.length + 1); // adjusting the size of the literals array
-            literals[literals.length - 1] = data[pos]; // append literal
+            literals = Arrays.copyOf(literals, literals.length + 1);
+            literals[literals.length - 1] = data[pos];
                         
             potentialMatch = Arrays.copyOfRange(data, 0, pos); // get data on LHS from current pos
 
@@ -120,47 +148,27 @@ class LZJ4Encoderv2 extends FileOperations {
             System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
             System.out.println("literals: " + Arrays.toString(literals));
 
-            ArrayList<Integer> matches = findMatches(potentialMatch, literals);
+            ArrayList<int[]> matches = findFirstMatch(potentialMatch, literals[literals.length-1]);
 
-            System.out.println("matches (pos): " + matches);
+            //for(int j = 0; j< matches.size(); j++){
+            //    System.out.println("First literal match (pos): " + Arrays.toString(matches.get(j)));
+            //}            
 
-
-            // If there are no matches, reset the potentialMatch variable and continue
-            if (matches.isEmpty()) {
-
-                System.out.println("here");
+            // If there are no matches, reset the literals variable
+            if (matches.size() <= 0) {
+                System.out.println("No matches");
                 literals = new byte[0];
                 pos++;
                 continue;
-
             } else {
 
-                // this variable takes over in case that multiple matches are found past pos
-                int window_counter = pos;
+                // first matches recursively from position
+                int[] bestMatch = findBestMatches(matches, pos);
 
-                while(matches.size() > 0) {
-                    window_counter++;
-                    if(window_counter >= FILESIZE - 5){
-                        break;
-                    }
-                    System.out.println("last 5 bytes? " + lastFiveBytes());
-                    
-                    //literals = Arrays.copyOf(literals, literals.length + 1); // adjusting the size of the literals array
-                    //literals[literals.length - 1] = data[pos]; // append literal
-
-                    potentialMatch = Arrays.copyOfRange(data, 0, window_counter); // get data on LHS from current pos
-
-                    System.out.println("\npos: " + pos);
-                    System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
-                    System.out.println("literals: " + Arrays.toString(literals));
-
-                    matches = findMatches(potentialMatch, literals);
-
-                    System.out.println("matches (pos): " + matches);
-
-                }
-                                  
-                matchLen = potentialMatch.length;
+                System.out.println("Best match (pos, len): " + Arrays.toString(bestMatch));
+                                
+                int matchStart = bestMatch[0];
+                matchLen = bestMatch[1];
                 
                 if(matchLen < 4){
                     pos++;
@@ -169,7 +177,7 @@ class LZJ4Encoderv2 extends FileOperations {
 
                 if (literals.length <= matchLen) {
 
-                    createDataBlock(literals, startOfLiterals, matches, matchLen, window_counter);
+                    createDataBlock(literals, startOfLiterals, matchStart, matchLen);
 
 
                     if(lz4block.getSymbols().length <= 0){
