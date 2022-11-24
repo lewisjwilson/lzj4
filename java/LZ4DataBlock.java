@@ -26,7 +26,10 @@ public class LZ4DataBlock {
 
         System.arraycopy(symbols, 0, dataBlock, 1, symbols.length);
 
-       
+        String offset1Hex = this.getOffset().substring(0, 2);
+        int offset1Int = Integer.parseInt(offset1Hex, 16);
+        String offset2Hex = this.getOffset().substring(2, 4);
+        int offset2Int = Integer.parseInt(offset2Hex, 16);
 
         dataBlock[blockLen - 2] = (byte)offset1Int;
         dataBlock[blockLen - 1] = (byte)offset2Int;

@@ -12,7 +12,7 @@ class LZJ4Encoderv2 extends FileOperations {
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
     // private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
-    private static String sourcePathStr = "/home/lewis/lzj4/test_files/a20";
+    private static String sourcePathStr = "test_files/a20";
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
