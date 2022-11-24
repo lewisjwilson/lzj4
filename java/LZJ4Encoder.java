@@ -11,8 +11,8 @@ class LZJ4Encoder extends FileOperations {
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    private static String sourcePathStr = "/home/lewis/lzj4/test_files/abbccabbcccabbaabcc.txt";
-    //private static String sourcePathStr = "/home/lewis/lzj4/test_files/a20";
+    //private static String sourcePathStr = "/home/lewis/lzj4/test_files/abbccabbcccabbaabcc.txt";
+    private static String sourcePathStr = "/home/lewis/lzj4/test_files/a20";
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -24,53 +24,9 @@ class LZJ4Encoder extends FileOperations {
     // Creating an output file
     static String outPathStr = "out.lz4";
 
-    // Window buffer and search buffer variables
-    static int lookAheadSize = 100000; // temporarily - to encode all data at once
-    static int searchBufferSize = 100000; // temporarily - to encode all data at once
-
     // Cursor position initialization
-    public static int pos = 0;
+    public static int pos = 1;
 
-    // Getting the data in the window (search forward)
-    public static byte[] lookAheadWindow;
-
-    // Getting the data in the search buffer (search backward)
-    public static byte[] searchBuffer;
-    
-
-    // Method to process the data in the search buffer (dealing with end cases)
-    public static byte[] getBuffer() {
-        if (pos - searchBufferSize < 0) {
-            return Arrays.copyOfRange(dataList.get(0), 0, pos);
-        } else {
-            return Arrays.copyOfRange(dataList.get(0), pos - searchBufferSize, pos);
-        }
-    }
-
-    // Method to process the data in the look-ahead window (dealing with end cases)
-    public static byte[] getWindow() {
-        if (pos + lookAheadSize > FILESIZE) {
-            return Arrays.copyOfRange(dataList.get(0), pos, (int)FILESIZE);
-        } else {
-            return Arrays.copyOfRange(dataList.get(0), pos, pos + lookAheadSize);
-        }
-    }
-
-    // Method to find the indexes of subarray matches in an array
-    public static ArrayList<Integer> findMatches(byte[] mainArr, byte[] subArr) {
-        ArrayList<Integer> matches = new ArrayList<Integer>();
-        for (int i = 0; i < mainArr.length; i++) {
-            // Check if the first value matches
-            if (mainArr[i] == subArr[0]) { 
-                // Create temporary sub array
-                byte[] temp = Arrays.copyOfRange(mainArr, i, (subArr.length + i));
-                if (Arrays.equals(temp, subArr)) {
-                    matches.add(i);
-                }
-            }
-        }
-        return matches;
-    }
 
     private static void magicNumber(){
         byte[] magic = {0x04, 0x22, 0x4d, 0x18};
@@ -81,18 +37,66 @@ class LZJ4Encoder extends FileOperations {
             e.printStackTrace();
         }
     }
+
+    // Get position of match of item in array
+    // Output : ArrayList<{startOfMatch, lengthOfMatch}>
+    public static ArrayList<int[]> findFirstMatch(byte[] array, byte literal) {
+        ArrayList<int[]> matches = new ArrayList<>();
+        for (int i = 0; i < array.length; i++) {
+            // Check if the first value matches
+            if (array[i] == literal) { 
+                matches.add(new int[]{i, 1});
+            }
+        }
+        return matches;
+    }
+
+    // Find the best matches avaliable from the current matches array
+    public static int[] findBestMatches(ArrayList<int[]> matches, int checkFromPosition) {
+        byte[] window = dataList.get(0);
+        int lit_pos = checkFromPosition;
+        int[] bestMatch = new int[]{0, 0};
+
+        // while there is more than one best match
+        for (int[] match : matches) {
+            int match_pos = match[0];
+
+            while(lit_pos < FILESIZE - 5){
+                if(window[lit_pos] == window[match_pos]){
+                    lit_pos++;
+                    match_pos++;
+                    match[1]++;
+                } else {
+                    break;
+                }
+            }
+
+            lit_pos = checkFromPosition;
+        }
+
+        int best = 0;
+
+        for (int[] match : matches) {
+            if(match[1]-1 > best){
+                best = match[1]-1;
+                bestMatch[0] = match[0];
+                bestMatch[1] = best;
+            }
+        }
+
+        return bestMatch;
+    }
     
 
-    private static void createDataBlock(int matchLength, byte[] symbols, ArrayList<Integer> matches,
-            int newSymbolsCount) {
+    private static void createDataBlock(byte[] literals, int startOfLiterals, int startOfMatch, int matchLength) {
 
         // Creating the token
-        String hiToken = String.format("%4s", Integer.toBinaryString(newSymbolsCount)).replace(' ', '0');
+        String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
         
         // Converting the binary string token to decimal
-        System.out.println(" new symbols: " + newSymbolsCount);
+        System.out.println(" new symbols: " + literals.length);
         System.out.println(" match len: " + matchLength);
 
         int tokenDec = Integer.parseInt(token, 2);
@@ -100,22 +104,28 @@ class LZJ4Encoder extends FileOperations {
         // The token value in decimal (will be converted to hex on writing)
         // System.out.println(tokenDec);
 
-        // Processing the symbols
-        byte[] symbolsArr = Arrays.copyOfRange(symbols, 0, newSymbolsCount);
+        System.out.println(pos);
+        System.out.println(matchLength);
 
-        System.out.println(Arrays.toString(symbolsArr));
 
         // Processing the offset
-        String offset = String.format("%16s", Integer.toBinaryString(searchBuffer.length - matches.get(0))).replace(' ',
+        String offset = "";
+        if(matchLength > pos){
+            offset = String.format("%16s", Integer.toBinaryString(pos)).replace(' ',
+            '0');
+        } else {
+            offset = String.format("%16s", Integer.toBinaryString(pos - matchLength)).replace(' ',
                 '0');
+        }
         // Converting binary string offset to Hexadecimal
         int offsetDec = Integer.parseInt(offset, 2);
         String offsetHex = String.format("%4s", Integer.toHexString(offsetDec)).replace(' ', '0');
         String offsetByte1 = offsetHex.substring(2, 4);
         String offsetByte2 = offsetHex.substring(0, 2);
 
+
         lz4block.setToken((byte)tokenDec);
-        lz4block.setSymbols(symbolsArr);
+        lz4block.setSymbols(literals);
         lz4block.setOffset(offsetByte1, offsetByte2);
 
         byte[] dataBlock = lz4block.createDataBlock();
@@ -129,104 +139,80 @@ class LZJ4Encoder extends FileOperations {
 
     }
 
-    private static boolean lastFiveBytes(){
-        return pos >= FILESIZE - 5;
-    }
+    public static void dataTraverse(byte[] data) {
 
-    public static void dataTraverse(byte[] lookAheadWindow) {
+        int matchLen = 0;
+        byte[] literalsToCopy = new byte[0];
+        byte[] window;
+        byte literalToCheck;
 
-        while (!lastFiveBytes()) {
-            byte[] literals = new byte[0];
-            int matchLen = 0;
-            byte[] potentialMatch;
-            searchBuffer = getBuffer();
+        // used in the case that a block was just created and a new block will now be created with no literals
+        boolean blockJustCreated = false;
 
-            int lastMatchFoundAtPos = 0;
+        // For the entirety of the data (minus the trailing 5 bytes)
+        while(pos <= FILESIZE - 5) {
 
-            int c = 0;
+            int startOfLiterals = pos;
 
-            while(c < lookAheadWindow.length) {
-                //System.out.println("pos: " + pos);
+            window = Arrays.copyOfRange(data, 0, pos);
+                       
+            literalToCheck = data[pos];
+                                    
+            ArrayList<int[]> matches = findFirstMatch(window, literalToCheck);
 
-                lookAheadWindow = getWindow();
+            // this occurs when a block was just created an no new literals will be appended
+            if(!matches.isEmpty() && blockJustCreated){
+                blockJustCreated = false;
+            } else {
+                literalsToCopy = Arrays.copyOf(literalsToCopy, literalsToCopy.length + 1);
+                literalsToCopy[literalsToCopy.length - 1] = data[pos-1];
+            }            
+            
+            System.out.println("\npos: " + pos);
+            System.out.println("window: " + Arrays.toString(window));
+            System.out.println("literalsToCopy: " + Arrays.toString(literalsToCopy));        
+            System.out.println("literalToCheck (in window): " + (int)literalToCheck + " (" + (char)literalToCheck + ")");
 
-                if (lookAheadWindow.length <= 0) {
-                    System.out.println("End of window reached");
-                    break;
-                }
 
-                searchBuffer = getBuffer();
-                // System.out.println("buffer: " + Arrays.toString(searchBuffer));
-                // System.out.println("window: " + Arrays.toString(lookAheadWindow));
+            // If there are no matches, increase pos and continue
+            if (matches.size() <= 0) {
+                System.out.println("No matches");
+                pos++;
+                continue;
+            } else {
+                // best match from position of first match
+                int[] bestMatch = findBestMatches(matches, pos);
+
+                System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
+                                
+                int matchStart = bestMatch[0];
+                matchLen = bestMatch[1];
                 
-                potentialMatch = Arrays.copyOfRange(lookAheadWindow, 0, c); // get the current substring
-                // System.out.println("c: " + c);
-
-                // In the case that the first literal is checked after a data block has been created
-                // Required so that current literal can be searched for in buffer
-                if(potentialMatch.length <= 0 && searchBuffer.length > 0){
-                    potentialMatch = Arrays.copyOfRange(lookAheadWindow, 0, c+1); // get the current substring
-                } else if (potentialMatch.length > searchBuffer.length){
-                    pos++;
-                    searchBuffer = getBuffer();
-                }
-
-                // System.out.println(lookAheadWindow.length);
-                //System.out.println("buffer: " + Arrays.toString(searchBuffer));
-                //System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
-
-                c++;
-
-                ArrayList<Integer> matches = findMatches(searchBuffer, potentialMatch);
-                // System.out.println("matches: " + matches);
-                // System.out.println("litlen: " + literalsLength);
-                
-                // If there are no matches, reset the subArr variable and continue
-                if (matches.isEmpty()) {
-                    potentialMatch = new byte[0];
+                if(matchLen < 4){
+                    System.out.println("MatchLen < 4");
                     pos++;
                     continue;
-                } else {
-
-                    literals = Arrays.copyOfRange(dataList.get(0), lastMatchFoundAtPos, pos);
-                    
-                    lastMatchFoundAtPos = pos;
-                    matchLen = potentialMatch.length;
-                    // System.out.println("Match found at index " + matches.get(0));
-                    // If the length of the current best match is less than the length of the
-                    // current substring
-
-                    System.out.println("lits: "  + Arrays.toString(literals));
-                    System.out.println("matchlen: "  + matchLen);
-
-                    if(matchLen < 4){
-                        continue;
-                    }
-                    
-                    if (literals.length <= matchLen) {
-
-                        // Replace the best match
-                        
-
-                        createDataBlock(matchLen, literals, matches, literals.length);
-                        // System.out.println("pos : " + pos + ", best match: " + Arrays.toString(bestMatch) +  ", match length: " + matchLen);
-                        // System.out.println("matches indexes: " + matches.toString());
-
-                        // This if statement changes the position of the cursor
-                        // and also acounts for if no symbols were copied to the previous block
-                        if(lz4block.getSymbols().length <= 0){
-                            pos = pos + matchLen + 1;
-                        } else {
-                            pos = pos + matchLen;
-                        }
-                        
-                        System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , symbols: " + lz4block.getSymbols().length);
-                        
-                        break;
-                    }
                 }
 
+                // if the number of literals to copy is less than the length of the match
+                if (literalsToCopy.length <= matchLen) {
+
+                    createDataBlock(literalsToCopy, startOfLiterals, matchStart, matchLen);
+                   
+                    if(literalsToCopy.length <= 0){
+                        pos = pos + matchLen + 1;
+                    } else {
+                        pos = pos + matchLen;
+                    }
+
+                    System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
+                    
+                    matchLen = 0;
+                    literalsToCopy = new byte[0];
+                    blockJustCreated = true;
+                }
             }
+            
 
         }
     }
@@ -242,10 +228,15 @@ class LZJ4Encoder extends FileOperations {
                 pos++;
             }
             System.out.print("]\n");
-            outStream.write((byte) 0);
-            outStream.write((byte) 0);
-            outStream.write((byte) 0);
-            outStream.write((byte) 0);
+
+            byte[] endMarker = {0x00, 0x00, 0x00, 0x00};
+            try {
+                outStream.write(endMarker);
+            } catch (IOException e) {
+                System.out.println("LZJ4Encoder.endOfData()");
+                e.printStackTrace();
+            }
+
             System.out.println("End Marker: [00, 00, 00, 00]");
         } catch (IOException e) {
             System.out.println("LZJ4Encoder.endOfData()");
@@ -260,10 +251,9 @@ class LZJ4Encoder extends FileOperations {
         FILESIZE = FileOperations.getFileSize(sourcePathStr);
         dataList = FileOperations.importRawData(sourcePathStr);
 
-        lookAheadWindow = getWindow();
-        searchBuffer = getBuffer();
+        byte[] data = dataList.get(0);
         
-        System.out.println("Uncompressed data: " + Arrays.toString(dataList.get(0)));
+        System.out.println("Uncompressed data: " + Arrays.toString(data));
 
         // Create a new file if not exists (else overwrite)
         FileOperations.createFile(outPathStr);
@@ -273,7 +263,7 @@ class LZJ4Encoder extends FileOperations {
 
         // Writing data
         magicNumber();
-        dataTraverse(lookAheadWindow);
+        dataTraverse(data);
         endOfData();
         System.out.println("End of data reached!");
 
