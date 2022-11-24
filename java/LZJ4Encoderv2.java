@@ -11,7 +11,7 @@ class LZJ4Encoderv2 extends FileOperations {
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    // private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
+    //private static String sourcePathStr = "test_files/abbccabbcccabbaabcc.txt";
     private static String sourcePathStr = "test_files/a20";
     private static long FILESIZE;
     // List to store all bytes of source file
@@ -64,14 +64,16 @@ class LZJ4Encoderv2 extends FileOperations {
             
             while(lit_pos < FILESIZE - 5){
                 if(window[lit_pos] == window[match_pos]){
+                    System.out.println("HERE: " + (char)window[match_pos]);
                     lit_pos++;
+                    match_pos++;
                     best++;
                 } else { 
                     break;
                 }
             }
             if(best > bestMatch[1]){
-                bestMatch[0] = match_pos;
+                bestMatch[0] = lit_pos;
                 bestMatch[1] = best-1; //taking back the increment from the last loop cycle
             }
             lit_pos = checkFromPosition;
@@ -96,6 +98,9 @@ class LZJ4Encoderv2 extends FileOperations {
 
         // The token value in decimal (will be converted to hex on writing)
         // System.out.println(tokenDec);
+
+        System.out.println("mL: " + matchLength);
+        System.out.println("pos: " + pos);
 
         // Processing the offset
         String offset = "";
@@ -131,64 +136,60 @@ class LZJ4Encoderv2 extends FileOperations {
     public static void dataTraverse(byte[] data) {
 
         int matchLen = 0;
-        byte[] potentialMatch;
-        byte[] literals = new byte[0];
+        byte[] potentialMatch = new byte[0];
+        byte literalToCheck;
 
         // For the entirety of the data (minus the trailing 5 bytes)
         for (int i = 0; i < FILESIZE - 5; i++) {
 
             int startOfLiterals = pos;
             
-            literals = Arrays.copyOf(literals, literals.length + 1);
-            literals[literals.length - 1] = data[pos];
+            potentialMatch = Arrays.copyOf(potentialMatch, potentialMatch.length + 1);
+            potentialMatch[potentialMatch.length - 1] = data[pos];
+            literalToCheck = potentialMatch[potentialMatch.length - 1];
                         
             potentialMatch = Arrays.copyOfRange(data, 0, pos); // get data on LHS from current pos
 
             System.out.println("\npos: " + pos);
-            System.out.println("potentialMatch: " + Arrays.toString(potentialMatch));
-            System.out.println("literals: " + Arrays.toString(literals));
+            System.out.println("literalsToCopy: " + Arrays.toString(potentialMatch));        
+            System.out.println("literalToCheck (in potentialMatch): " + (int)literalToCheck + " (" + (char)literalToCheck + ")");
 
-            ArrayList<int[]> matches = findFirstMatch(potentialMatch, literals[literals.length-1]);
+            ArrayList<int[]> matches = findFirstMatch(potentialMatch, literalToCheck);
 
-            //for(int j = 0; j< matches.size(); j++){
-            //    System.out.println("First literal match (pos): " + Arrays.toString(matches.get(j)));
-            //}            
-
-            // If there are no matches, reset the literals variable
+            // If there are no matches, increase pos and continue
             if (matches.size() <= 0) {
                 System.out.println("No matches");
-                literals = new byte[0];
                 pos++;
                 continue;
             } else {
-
-                // first matches recursively from position
+                // best match from position of first match
                 int[] bestMatch = findBestMatches(matches, pos);
 
-                System.out.println("Best match (pos, len): " + Arrays.toString(bestMatch));
+                System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
                                 
                 int matchStart = bestMatch[0];
                 matchLen = bestMatch[1];
                 
                 if(matchLen < 4){
+                    System.out.println("MatchLen < 4");
                     pos++;
                     continue;
                 }
 
-                if (literals.length <= matchLen) {
+                if (potentialMatch.length <= matchLen) {
 
-                    createDataBlock(literals, startOfLiterals, matchStart, matchLen);
-
-
-                    if(lz4block.getSymbols().length <= 0){
+                    if(potentialMatch.length <= 0){
                         pos = pos + matchLen + 1;
                     } else {
                         pos = pos + matchLen;
                     }
-                    
+
+                    createDataBlock(potentialMatch, startOfLiterals, matchStart, matchLen);
+                   
                     System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
                     
                     matchLen = 0;
+                    potentialMatch = new byte[0];
 
                     break;
                 }
