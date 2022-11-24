@@ -6,13 +6,13 @@ import java.util.Arrays;
 import java.lang.Integer;
 
 
-class LZJ4Encoder extends FileOperations {
+public class LZJ4Encoder extends FileOperations {
 
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    //private static String sourcePathStr = "/home/lewis/lzj4/test_files/abbccabbcccabbaabcc.txt";
-    private static String sourcePathStr = "/home/lewis/lzj4/test_files/a20";
+    private static String sourcePathStr;
+    public static String FILENAME;
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -20,9 +20,6 @@ class LZJ4Encoder extends FileOperations {
     // List to store all bytes to be written
     public static ArrayList<byte[]> outputList = new ArrayList<>();
     static FileOutputStream outStream;
-
-    // Creating an output file
-    static String outPathStr = "out.lz4";
 
     // Cursor position initialization
     public static int pos = 1;
@@ -247,6 +244,16 @@ class LZJ4Encoder extends FileOperations {
 
     public static void main(String[] args) throws FileNotFoundException {
 
+        sourcePathStr = FileOperations.selectFile();
+        if(sourcePathStr == null){
+            System.out.println("No file selected!");
+            System.exit(0);
+        }
+
+        String[] pathPieces = sourcePathStr.split("/");
+        FILENAME = pathPieces[pathPieces.length-1];
+        System.out.println("FILENAME: " + FILENAME);
+
         // Get filesize of the source file and raw data
         FILESIZE = FileOperations.getFileSize(sourcePathStr);
         dataList = FileOperations.importRawData(sourcePathStr);
@@ -254,6 +261,8 @@ class LZJ4Encoder extends FileOperations {
         byte[] data = dataList.get(0);
         
         System.out.println("Uncompressed data: " + Arrays.toString(data));
+
+        String outPathStr = "../" + FILENAME + ".lz4";
 
         // Create a new file if not exists (else overwrite)
         FileOperations.createFile(outPathStr);
