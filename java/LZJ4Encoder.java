@@ -12,7 +12,7 @@ public class LZJ4Encoder extends FileOperations {
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
     private static String sourcePathStr;
-    public static String FILENAME;
+    private static String FILENAME;
     private static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
@@ -91,6 +91,13 @@ public class LZJ4Encoder extends FileOperations {
         String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
+
+        byte[] hiTokenPlus = new byte[0];
+        byte[] loTokenPlus;
+        int hiTokenDec = Integer.parseInt(hiToken, 2);
+        int loTokenDec = Integer.parseInt(loToken, 2);
+        if(hiTokenDec > 15){
+        }
         
         // Converting the binary string token to decimal
         System.out.println(" new symbols: " + literals.length);
