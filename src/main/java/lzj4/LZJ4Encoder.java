@@ -8,21 +8,26 @@ import java.lang.Integer;
 
 public class LZJ4Encoder extends FileOperations {
 
+    // Test Files
+    static String[] files = new String[]{"a20", "abbccabbcccabbaabcc.txt"};
+
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    private static String sourcePathStr;
-    private static String FILENAME;
-    private static long FILESIZE;
+    public static String sourcePathStr;
+    public static String FILENAME;
+    public static long FILESIZE;
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
 
     // List to store all bytes to be written
-    static FileOutputStream outStream;
+    public static FileOutputStream outStream;
     public static ArrayList<byte[]> compressedData = new ArrayList<>();
 
     // Cursor position initialization
     public static int pos = 1;
+
+    public static String outPathStr;
 
 
     private static void magicNumber(){
@@ -160,7 +165,7 @@ public class LZJ4Encoder extends FileOperations {
                                     
             ArrayList<int[]> matches = findFirstMatch(window, literalToCheck);
 
-            // this occurs when a block was just created an no new literals will be appended
+            // this occurs when a block was just created and no new literals will be appended
             if(!matches.isEmpty() && blockJustCreated){
                 blockJustCreated = false;
             } else {
@@ -246,49 +251,61 @@ public class LZJ4Encoder extends FileOperations {
 
     public static void main(String[] args) throws FileNotFoundException {
 
-        //sourcePathStr = FileOperations.selectFile();         
-        if(sourcePathStr == null){
-            System.out.println("No file selected!");
-            System.exit(0);
+        // for each test file
+        for (String file : files) {
+            
+            //sourcePathStr = FileOperations.selectFile();         
+            sourcePathStr = "test_binaries/" + file;
+            if(sourcePathStr == null){
+                System.out.println("No file selected!");
+                System.exit(0);
+            }
+
+            String[] pathPieces = sourcePathStr.split("/");
+            FILENAME = pathPieces[pathPieces.length-1];
+            System.out.println("FILENAME: " + FILENAME);
+
+            // Get filesize of the source file and raw data
+            FILESIZE = FileOperations.getFileSize(sourcePathStr);
+            dataList = FileOperations.importRawData(sourcePathStr);
+
+            byte[] data = dataList.get(0);
+            
+            System.out.println("Uncompressed data: " + Arrays.toString(data));
+
+            String outPathStr = "../" + FILENAME + ".lz4";
+
+            outPathStr = "out.lz4";
+            // Create a new file if not exists (else overwrite)
+            FileOperations.createFile(outPathStr);
+
+            // Create data stream for writing to file
+            outStream = FileOperations.createOutputStream(outPathStr);
+
+            // Writing data
+            magicNumber();
+            dataTraverse(data);
+            endOfData();
+
+            FileOperations.closeOutputStream(outStream);
+            //System.out.println("File \"" + outPathStr + "\" successfully written.");
+
+            // Printing to verify compressed data in terminal
+            System.out.print("Compressed Data: ");
+            compressedData = FileOperations.importRawData(outPathStr);
+            for(int i = 0 ; i<compressedData.size() ; i++){
+                System.out.print(Arrays.toString(compressedData.get(i)));
+            }
+            System.out.println("\n");
+
+            resetPos();
         }
-
-        String[] pathPieces = sourcePathStr.split("/");
-        FILENAME = pathPieces[pathPieces.length-1];
-        System.out.println("FILENAME: " + FILENAME);
-
-        // Get filesize of the source file and raw data
-        FILESIZE = FileOperations.getFileSize(sourcePathStr);
-        dataList = FileOperations.importRawData(sourcePathStr);
-
-        byte[] data = dataList.get(0);
-        
-        System.out.println("Uncompressed data: " + Arrays.toString(data));
-
-        String outPathStr = "../" + FILENAME + ".lz4";
-
-        outPathStr = "out.lz4";
-        // Create a new file if not exists (else overwrite)
-        FileOperations.createFile(outPathStr);
-
-        // Create data stream for writing to file
-        outStream = FileOperations.createOutputStream(outPathStr);
-
-        // Writing data
-        magicNumber();
-        dataTraverse(data);
-        endOfData();
-
-        FileOperations.closeOutputStream(outStream);
-        //System.out.println("File \"" + outPathStr + "\" successfully written.");
-
-        // Printing to verify compressed data in terminal
-        System.out.print("Compressed Data: ");
-        ArrayList<byte[]> compressed = FileOperations.importRawData(outPathStr);
-        for(int i = 0 ; i<compressed.size() ; i++){
-            System.out.print(Arrays.toString(compressed.get(i)));
-        }
-        System.out.println("\n");
        
     }
 
+    public static void resetPos(){
+        pos = 1;
+    }
+
 }
+
