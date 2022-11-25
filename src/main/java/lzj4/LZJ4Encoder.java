@@ -27,9 +27,6 @@ public class LZJ4Encoder extends FileOperations {
     // Cursor position initialization
     public static int pos = 1;
 
-    public static String outPathStr;
-
-
     private static void magicNumber(){
         byte[] magic = {0x04, 0x22, 0x4d, 0x18};
         try {
@@ -41,9 +38,12 @@ public class LZJ4Encoder extends FileOperations {
         }
     }
 
-    // Get position of match of item in array
-    // Output : ArrayList<{startOfMatch, lengthOfMatch}>
-    public static ArrayList<int[]> findFirstMatch(byte[] array, byte literal) {
+
+    // Find the best matches avaliable from the current matches array
+    public static int[] findBestMatches(byte[] array, byte literal) {
+
+        // Get position of match of item in array
+        // Output : ArrayList<{startOfMatch, lengthOfMatch}>    
         ArrayList<int[]> matches = new ArrayList<>();
         for (int i = 0; i < array.length; i++) {
             // Check if the first value matches
@@ -51,13 +51,12 @@ public class LZJ4Encoder extends FileOperations {
                 matches.add(new int[]{i, 1});
             }
         }
-        return matches;
-    }
 
-    // Find the best matches avaliable from the current matches array
-    public static int[] findBestMatches(ArrayList<int[]> matches, int checkFromPosition) {
+        // if the first literal does not match any literals in the window
+        if(matches.size() <= 0){return new int[0];}
+
         byte[] window = dataList.get(0);
-        int lit_pos = checkFromPosition;
+        int lit_pos = pos;
         int[] bestMatch = new int[]{0, 0};
 
         // while there is more than one best match
@@ -74,7 +73,7 @@ public class LZJ4Encoder extends FileOperations {
                 }
             }
 
-            lit_pos = checkFromPosition;
+            lit_pos = pos;
         }
 
         int best = 0;
@@ -163,10 +162,10 @@ public class LZJ4Encoder extends FileOperations {
             window = Arrays.copyOfRange(data, 0, pos);      
             literalToCheck = data[pos];
                                     
-            ArrayList<int[]> matches = findFirstMatch(window, literalToCheck);
+            int[] bestMatch = findBestMatches(window, literalToCheck);
 
             // this occurs when a block was just created and no new literals will be appended
-            if(!matches.isEmpty() && blockJustCreated){
+            if(bestMatch.length > 0 && blockJustCreated){
                 blockJustCreated = false;
             } else {
                 literalsToCopy = Arrays.copyOf(literalsToCopy, literalsToCopy.length + 1);
@@ -181,13 +180,11 @@ public class LZJ4Encoder extends FileOperations {
             */
 
             // If there are no matches, increase pos and continue
-            if (matches.size() <= 0) {
+            if (bestMatch.length <= 0) {
                 //System.out.println("No matches");
                 pos++;
                 continue;
             } else {
-                // best match from position of first match
-                int[] bestMatch = findBestMatches(matches, pos);
                 //System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
                                 
                 int matchStart = bestMatch[0];
@@ -293,10 +290,8 @@ public class LZJ4Encoder extends FileOperations {
             // Printing to verify compressed data in terminal
             System.out.print("Compressed Data: ");
             compressedData = FileOperations.importRawData(outPathStr);
-            for(int i = 0 ; i<compressedData.size() ; i++){
-                System.out.print(Arrays.toString(compressedData.get(i)));
-            }
-            System.out.println("\n");
+            System.out.print(Arrays.toString(compressedData.get(0)));
+            System.out.print(" (len: " + compressedData.get(0).length + ")\n\n");
 
             resetPos();
         }
