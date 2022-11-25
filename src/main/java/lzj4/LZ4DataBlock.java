@@ -1,3 +1,4 @@
+package src.main.java.lzj4;
 import java.util.Arrays;
 
 public class LZ4DataBlock {
@@ -33,7 +34,6 @@ public class LZ4DataBlock {
 
         dataBlock[blockLen - 2] = (byte)offset1Int;
         dataBlock[blockLen - 1] = (byte)offset2Int;
-
 
         System.out.println("Data Block: " + Arrays.toString(dataBlock));
 

@@ -1,10 +1,10 @@
+package src.main.java.lzj4;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.lang.Integer;
-
 
 public class LZJ4Encoder extends FileOperations {
 
@@ -18,8 +18,8 @@ public class LZJ4Encoder extends FileOperations {
     public static ArrayList<byte[]> dataList = new ArrayList<>();
 
     // List to store all bytes to be written
-    public static ArrayList<byte[]> outputList = new ArrayList<>();
     static FileOutputStream outStream;
+    public static ArrayList<byte[]> compressedData = new ArrayList<>();
 
     // Cursor position initialization
     public static int pos = 1;
@@ -29,6 +29,7 @@ public class LZJ4Encoder extends FileOperations {
         byte[] magic = {0x04, 0x22, 0x4d, 0x18};
         try {
             outStream.write(magic);
+            compressedData.add(magic);
         } catch (IOException e) {
             System.out.println("LZJ4Encoder.magicNumber()");
             e.printStackTrace();
@@ -92,25 +93,21 @@ public class LZJ4Encoder extends FileOperations {
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
 
-        byte[] hiTokenPlus = new byte[0];
-        byte[] loTokenPlus;
-        int hiTokenDec = Integer.parseInt(hiToken, 2);
-        int loTokenDec = Integer.parseInt(loToken, 2);
-        if(hiTokenDec > 15){
-        }
+        //byte[] hiTokenPlus = new byte[0];
+        //byte[] loTokenPlus;
+        //int hiTokenDec = Integer.parseInt(hiToken, 2);
+        //int loTokenDec = Integer.parseInt(loToken, 2);
+        //if(hiTokenDec > 15){
+        //}
         
         // Converting the binary string token to decimal
-        System.out.println(" new symbols: " + literals.length);
-        System.out.println(" match len: " + matchLength);
+        //System.out.println(" new symbols: " + literals.length);
+        //System.out.println(" match len: " + matchLength);
 
         int tokenDec = Integer.parseInt(token, 2);
 
         // The token value in decimal (will be converted to hex on writing)
         // System.out.println(tokenDec);
-
-        System.out.println(pos);
-        System.out.println(matchLength);
-
 
         // Processing the offset
         String offset = "";
@@ -136,6 +133,7 @@ public class LZJ4Encoder extends FileOperations {
         
         try {
             outStream.write(dataBlock);
+            compressedData.add(dataBlock);
         } catch (IOException e) {
             System.out.println("LZJ4Encoder.createDataBlock()");
             e.printStackTrace();
@@ -157,9 +155,7 @@ public class LZJ4Encoder extends FileOperations {
         while(pos <= FILESIZE - 5) {
 
             int startOfLiterals = pos;
-
-            window = Arrays.copyOfRange(data, 0, pos);
-                       
+            window = Arrays.copyOfRange(data, 0, pos);      
             literalToCheck = data[pos];
                                     
             ArrayList<int[]> matches = findFirstMatch(window, literalToCheck);
@@ -170,30 +166,30 @@ public class LZJ4Encoder extends FileOperations {
             } else {
                 literalsToCopy = Arrays.copyOf(literalsToCopy, literalsToCopy.length + 1);
                 literalsToCopy[literalsToCopy.length - 1] = data[pos-1];
-            }            
-            
+            }  
+
+            /*
             System.out.println("\npos: " + pos);
             System.out.println("window: " + Arrays.toString(window));
             System.out.println("literalsToCopy: " + Arrays.toString(literalsToCopy));        
             System.out.println("literalToCheck (in window): " + (int)literalToCheck + " (" + (char)literalToCheck + ")");
-
+            */
 
             // If there are no matches, increase pos and continue
             if (matches.size() <= 0) {
-                System.out.println("No matches");
+                //System.out.println("No matches");
                 pos++;
                 continue;
             } else {
                 // best match from position of first match
                 int[] bestMatch = findBestMatches(matches, pos);
-
-                System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
+                //System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
                                 
                 int matchStart = bestMatch[0];
                 matchLen = bestMatch[1];
                 
                 if(matchLen < 4){
-                    System.out.println("MatchLen < 4");
+                    //System.out.println("MatchLen < 4");
                     pos++;
                     continue;
                 }
@@ -208,8 +204,7 @@ public class LZJ4Encoder extends FileOperations {
                     } else {
                         pos = pos + matchLen;
                     }
-
-                    System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
+                    //System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
                     
                     matchLen = 0;
                     literalsToCopy = new byte[0];
@@ -251,7 +246,7 @@ public class LZJ4Encoder extends FileOperations {
 
     public static void main(String[] args) throws FileNotFoundException {
 
-        sourcePathStr = FileOperations.selectFile();
+        //sourcePathStr = FileOperations.selectFile();         
         if(sourcePathStr == null){
             System.out.println("No file selected!");
             System.exit(0);
@@ -271,6 +266,7 @@ public class LZJ4Encoder extends FileOperations {
 
         String outPathStr = "../" + FILENAME + ".lz4";
 
+        outPathStr = "out.lz4";
         // Create a new file if not exists (else overwrite)
         FileOperations.createFile(outPathStr);
 
@@ -281,12 +277,18 @@ public class LZJ4Encoder extends FileOperations {
         magicNumber();
         dataTraverse(data);
         endOfData();
-        System.out.println("End of data reached!");
 
         FileOperations.closeOutputStream(outStream);
+        //System.out.println("File \"" + outPathStr + "\" successfully written.");
 
-        System.out.println("File \"" + outPathStr + "\" successfully written.");
-
+        // Printing to verify compressed data in terminal
+        System.out.print("Compressed Data: ");
+        ArrayList<byte[]> compressed = FileOperations.importRawData(outPathStr);
+        for(int i = 0 ; i<compressed.size() ; i++){
+            System.out.print(Arrays.toString(compressed.get(i)));
+        }
+        System.out.println("\n");
+       
     }
 
 }
