@@ -164,10 +164,8 @@ public class LZJ4Encoder extends FileOperations {
                                     
             int[] bestMatch = findBestMatches(window, literalToCheck);
 
-            // this occurs when a block was just created and no new literals will be appended
-            if(bestMatch.length > 0 && blockJustCreated){
-                blockJustCreated = false;
-            } else {
+            // this occurs ONLY when a block was just created and no new literals will be appended
+            if(!blockJustCreated){
                 literalsToCopy = Arrays.copyOf(literalsToCopy, literalsToCopy.length + 1);
                 literalsToCopy[literalsToCopy.length - 1] = data[pos-1];
             }  
