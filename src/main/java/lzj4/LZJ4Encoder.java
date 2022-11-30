@@ -1,3 +1,5 @@
+package src.main.java.lzj4;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -271,9 +273,9 @@ public class LZJ4Encoder extends FileOperations {
             
             System.out.println("Uncompressed data: " + Arrays.toString(data));
 
-            String outPathStr = "../" + FILENAME + ".lz4";
+            String outPathStr = "/home/lewis/lzj4/lz4_output_files/" + FILENAME + ".lz4";
 
-            outPathStr = "out.lz4";
+            //outPathStr = "out.lz4";
             // Create a new file if not exists (else overwrite)
             FileOperations.createFile(outPathStr);
 

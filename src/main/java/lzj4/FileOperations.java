@@ -1,3 +1,5 @@
+package src.main.java.lzj4;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
