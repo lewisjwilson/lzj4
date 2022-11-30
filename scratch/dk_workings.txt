@@ -1,0 +1,31 @@
+d  k  d  d  k  k  k  d  d  k  d  k  k  k  k  k  k  d  d  d
+0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
+
+LZ4 Compressed: [ <magic> 60 d k d d k k 05 00 00 07 00 k k k d d <end> ]
+
+Compressing:
+	pos1 -> no match
+	pos2 -> match @ (0)d 		-> increment... (0,1)dk -> (2, 3)dd X
+	pos3 -> match @ (0)d, (2)d 	-> increment... (0,1)dk -> (3, 4)dk [OK!] -> (0,1,2)dkd -> (3,4,5)dkk X
+								    (2,3)dd -> (3, 4)dk X
+	pos4 -> ... no matches >= 4 ...
+	pos5 -> ... no matches >= 4 ...
+	pos6 ->						    (1,2,3,4)kddk -> (6,7,8,9)kddk
+									LITERALS: (0-5)dkddkk
+									HI TOKEN = 6
+									LO TOKEN = 4-4=0
+									OFFSET   = 05 00 [startPos(6)- startOfMatch(1)]
+	BLOCK 1: [60 d k d d k k 05 00]
+	
+	pos 10 -> 						    (3,4,5,6)dkkk -> (10,11,12,13)dkkk
+									LITERALS: None
+									HI TOKEN = 0
+									LO TOKEN = 4-4=0
+									OFFSET   = 07 00 [startPos(10)- startOfMatch(3)]
+	BLOCK 2: [00 07 00]
+
+	pos 14 -> match at (4)k		-> increment... (4, 5)kk -> (14, <15>)--15 is within datasize - 5! (20-5) UNCOMRESSED
+
+	BLOCK 3: [ k k k d d d ]
+
+	LZ4 Compressed: [ <magic> 60 d k d d k k 05 00 00 07 00 k k k d d <end> ]	
