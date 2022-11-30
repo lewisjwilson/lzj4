@@ -9,7 +9,7 @@ import java.lang.Integer;
 public class LZJ4Encoder extends FileOperations {
 
     // Test Files
-    static String[] files = new String[]{"a20", "abbccabbcccabbaabcc.txt"};
+    static String[] files = new String[]{"dk.txt", "a20", "abbccabbcccabbaabcc.txt"};
 
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
@@ -168,7 +168,7 @@ public class LZJ4Encoder extends FileOperations {
             if(!blockJustCreated){
                 literalsToCopy = Arrays.copyOf(literalsToCopy, literalsToCopy.length + 1);
                 literalsToCopy[literalsToCopy.length - 1] = data[pos-1];
-            }  
+            }
 
             /*
             System.out.println("\npos: " + pos);
@@ -189,27 +189,22 @@ public class LZJ4Encoder extends FileOperations {
                 matchLen = bestMatch[1];
                 
                 if(matchLen < 4){
-                    //System.out.println("MatchLen < 4");
                     pos++;
                     continue;
                 }
 
-                // if the number of literals to copy is less than the length of the match
-                if (literalsToCopy.length <= matchLen) {
-
-                    createDataBlock(literalsToCopy, startOfLiterals, matchStart, matchLen);
-                   
-                    if(literalsToCopy.length <= 0){
-                        pos = pos + matchLen + 1;
-                    } else {
-                        pos = pos + matchLen;
-                    }
-                    //System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
-                    
-                    matchLen = 0;
-                    literalsToCopy = new byte[0];
-                    blockJustCreated = true;
+                createDataBlock(literalsToCopy, startOfLiterals, matchStart, matchLen);
+                
+                if(literalsToCopy.length <= 0){
+                    pos = pos + matchLen + 1;
+                } else {
+                    pos = pos + matchLen;
                 }
+                //System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
+                
+                matchLen = 0;
+                literalsToCopy = new byte[0];
+                blockJustCreated = true;
             }
             
 

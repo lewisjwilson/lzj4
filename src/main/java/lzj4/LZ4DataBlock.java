@@ -3,6 +3,8 @@ import java.util.Arrays;
 
 public class LZ4DataBlock {
     private byte token;
+    private byte[] hiTokenPlus;
+    private byte[] loTokenPlus;
     private byte[] symbols;
     private String offset;
 
@@ -11,13 +13,45 @@ public class LZ4DataBlock {
         return token;
     }
 
+    public byte[] getHiTokenPlus() {
+        return hiTokenPlus;
+    }
+
+    public byte[] getLoTokenPlus() {
+        return loTokenPlus;
+    }
+
     public byte[] getSymbols() {
         return symbols;
     }
-
+    
     public String getOffset() {
         return offset;
     }
+
+    
+    // Setters
+    public void setToken(byte token) {
+        this.token = token;
+    }
+
+    public void setHiTokenPlus(byte[] hiTokenPlus) {
+        this.hiTokenPlus = hiTokenPlus;
+    }
+
+    public void setLoTokenPlus(byte[] loTokenPlus) {
+        this.loTokenPlus = loTokenPlus;
+    }
+
+    public void setSymbols(byte[] symbols) {
+        // Populating dataBlock with symbols (byte representation)
+        this.symbols = symbols;
+    }
+
+    public void setOffset(String offsetByte1, String offsetByte2) {
+        this.offset = offsetByte1 + offsetByte2;
+    }
+
 
     public byte[] createDataBlock() {
         int blockLen = 1 + this.getSymbols().length + 2;
@@ -39,20 +73,6 @@ public class LZ4DataBlock {
 
         return dataBlock;
 
-    }
-
-    // Setters
-    public void setToken(byte token) {
-        this.token = token;
-    }
-
-    public void setSymbols(byte[] symbols) {
-        // Populating dataBlock with symbols (byte representation)
-        this.symbols = symbols;
-    }
-
-    public void setOffset(String offsetByte1, String offsetByte2) {
-        this.offset = offsetByte1 + offsetByte2;
     }
 
 }
