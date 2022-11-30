@@ -8,6 +8,13 @@
             "type": "java",
             "name": "Launch LZJ4Encoder",
             "request": "launch",
+            "mainClass": "LZJ4Encoder",
+            "projectName": "lzj4_180e6420"
+        },
+        {
+            "type": "java",
+            "name": "Launch LZJ4Encoder",
+            "request": "launch",
             "mainClass": "src.main.java.lzj4.LZJ4Encoder",
             "projectName": "lzj4_4e45b3fa"
         },

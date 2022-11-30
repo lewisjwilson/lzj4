@@ -1,4 +1,3 @@
-package src.main.java.lzj4;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -17,6 +16,8 @@ public class LZJ4Encoder extends FileOperations {
     public static String sourcePathStr;
     public static String FILENAME;
     public static long FILESIZE;
+    public static long POS_LIMIT;
+
     // List to store all bytes of source file
     public static ArrayList<byte[]> dataList = new ArrayList<>();
 
@@ -63,7 +64,7 @@ public class LZJ4Encoder extends FileOperations {
         for (int[] match : matches) {
             int match_pos = match[0];
 
-            while(lit_pos < FILESIZE - 5){
+            while(lit_pos <= POS_LIMIT){
                 if(window[lit_pos] == window[match_pos]){
                     lit_pos++;
                     match_pos++;
@@ -157,7 +158,7 @@ public class LZJ4Encoder extends FileOperations {
         boolean blockJustCreated = false;
 
         // For the entirety of the data (minus the trailing 5 bytes)
-        while(pos <= FILESIZE - 5) {
+        while(pos < POS_LIMIT) {
 
             window = Arrays.copyOfRange(data, 0, pos);      
             literalToCheck = data[pos];
@@ -189,7 +190,11 @@ public class LZJ4Encoder extends FileOperations {
                 matchLen = bestMatch[1];
                 
                 if(matchLen < 4){
-                    pos++;
+                    if(pos+1 > POS_LIMIT){
+                        endOfData();
+                    } else {
+                        pos++;
+                    }
                     continue;
                 }
 
@@ -247,7 +252,7 @@ public class LZJ4Encoder extends FileOperations {
         for (String file : files) {
             
             //sourcePathStr = FileOperations.selectFile();         
-            sourcePathStr = "test_binaries/" + file;
+            sourcePathStr = "/home/lewis/lzj4/test_binaries/" + file;
             if(sourcePathStr == null){
                 System.out.println("No file selected!");
                 System.exit(0);
@@ -259,6 +264,7 @@ public class LZJ4Encoder extends FileOperations {
 
             // Get filesize of the source file and raw data
             FILESIZE = FileOperations.getFileSize(sourcePathStr);
+            POS_LIMIT = FILESIZE-5;
             dataList = FileOperations.importRawData(sourcePathStr);
 
             byte[] data = dataList.get(0);

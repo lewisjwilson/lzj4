@@ -1,4 +1,3 @@
-package src.main.java.lzj4;
 import java.util.Arrays;
 
 public class LZ4DataBlock {
