@@ -119,7 +119,7 @@ public class LZJ4Encoder extends FileOperations {
             offset = String.format("%16s", Integer.toBinaryString(pos)).replace(' ',
             '0');
         } else {
-            offset = String.format("%16s", Integer.toBinaryString(pos - matchLength)).replace(' ',
+            offset = String.format("%16s", Integer.toBinaryString(pos - startOfMatch)).replace(' ',
                 '0');
         }
         // Converting binary string offset to Hexadecimal
@@ -151,6 +151,7 @@ public class LZJ4Encoder extends FileOperations {
         byte[] literalsToCopy = new byte[0];
         byte[] window;
         byte literalToCheck;
+        int startOfLiterals = 0;
 
         // used in the case that a block was just created and a new block will now be created with no literals
         boolean blockJustCreated = false;
@@ -158,7 +159,6 @@ public class LZJ4Encoder extends FileOperations {
         // For the entirety of the data (minus the trailing 5 bytes)
         while(pos <= FILESIZE - 5) {
 
-            int startOfLiterals = pos;
             window = Arrays.copyOfRange(data, 0, pos);      
             literalToCheck = data[pos];
                                     
@@ -202,6 +202,7 @@ public class LZJ4Encoder extends FileOperations {
                 }
                 //System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
                 
+                startOfLiterals = pos;
                 matchLen = 0;
                 literalsToCopy = new byte[0];
                 blockJustCreated = true;
@@ -214,6 +215,7 @@ public class LZJ4Encoder extends FileOperations {
     // Appending ending literals (in line with spec) and bytes (value 0)
     public static void endOfData() {
         try {
+            System.out.println("pos; " + pos + " , FILESIZE; " + FILESIZE);
             long noOfEndBytes = FILESIZE - pos + 1;
             System.out.print("Final Uncompressed " + noOfEndBytes + " bytes: [");
             while (pos <= FILESIZE) {
