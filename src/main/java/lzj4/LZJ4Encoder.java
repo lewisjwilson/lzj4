@@ -211,12 +211,12 @@ public class LZJ4Encoder extends FileOperations {
         }
     }
     
-    // Appending 5 ending literals (in line with spec) and bytes (value 0)
+    // Appending ending literals (in line with spec) and bytes (value 0)
     public static void endOfData() {
         try {
-            int posMax = pos + 5;
-            System.out.print("Final 5 bytes: [");
-            while (pos < posMax) {
+            long noOfEndBytes = FILESIZE - pos + 1;
+            System.out.print("Final Uncompressed " + noOfEndBytes + " bytes: [");
+            while (pos <= FILESIZE) {
                 outStream.write((byte) dataList.get(0)[pos - 1]);
                 System.out.print(dataList.get(0)[pos - 1] + ", ");
                 pos++;
