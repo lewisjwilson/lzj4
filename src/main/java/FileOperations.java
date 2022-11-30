@@ -1,5 +1,3 @@
-package src.main.java.lzj4;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -8,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+
 import javax.swing.JFileChooser;
 
 public class FileOperations {

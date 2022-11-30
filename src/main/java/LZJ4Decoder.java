@@ -1,12 +1,10 @@
-package src.main.java.lzj4;
-
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.io.InputStream;
-import java.io.FileInputStream;
  
 
 public class LZJ4Decoder {

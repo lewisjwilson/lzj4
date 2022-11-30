@@ -1,11 +1,8 @@
-package src.main.java.lzj4;
-
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.lang.Integer;
 
 public class LZJ4Encoder extends FileOperations {
 
