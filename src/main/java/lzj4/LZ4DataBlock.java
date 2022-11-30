@@ -14,11 +14,13 @@ public class LZ4DataBlock {
     }
 
     public byte[] getHiTokenPlus() {
-        return hiTokenPlus;
+        // if this field is not used, return an empty array of size 0
+        return (hiTokenPlus == null) ? new byte[0] : hiTokenPlus;
     }
 
     public byte[] getLoTokenPlus() {
-        return loTokenPlus;
+        // if this field is not used, return an empty array of size 0
+        return (loTokenPlus == null) ? new byte[0] : loTokenPlus;
     }
 
     public byte[] getSymbols() {
@@ -54,7 +56,11 @@ public class LZ4DataBlock {
 
 
     public byte[] createDataBlock() {
-        int blockLen = 1 + this.getSymbols().length + 2;
+        int blockLen = 1                                // token
+                        + this.getHiTokenPlus().length  // literals+
+                        + this.getSymbols().length      // literals
+                        + 2                             // offset
+                        + this.getLoTokenPlus().length; // matchLen+
         byte[] dataBlock = new byte[blockLen];
 
         dataBlock[0] = Byte.valueOf(this.getToken());
