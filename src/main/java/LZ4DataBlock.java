@@ -61,19 +61,40 @@ public class LZ4DataBlock {
                         + 2                             // offset
                         + this.getLoTokenPlus().length; // matchLen+
         byte[] dataBlock = new byte[blockLen];
+        
+        int position = 0;
 
-        dataBlock[0] = Byte.valueOf(this.getToken());
-
-        System.arraycopy(symbols, 0, dataBlock, 1, symbols.length);
-
+        // Token
+        dataBlock[position] = Byte.valueOf(this.getToken());
+        
+        position++;
+        
+        // Literals+
+        if(hiTokenPlus != null){
+            System.arraycopy(hiTokenPlus, 0, dataBlock, position, hiTokenPlus.length);
+            position += hiTokenPlus.length;
+        }
+        
+        // Literals
+        System.arraycopy(symbols, 0, dataBlock, position, symbols.length);
+        
+        position += symbols.length;
+        
+        // Offset
         String offset1Hex = this.getOffset().substring(0, 2);
         int offset1Int = Integer.parseInt(offset1Hex, 16);
         String offset2Hex = this.getOffset().substring(2, 4);
         int offset2Int = Integer.parseInt(offset2Hex, 16);
-
-        dataBlock[blockLen - 2] = (byte)offset1Int;
-        dataBlock[blockLen - 1] = (byte)offset2Int;
-
+        dataBlock[position] = (byte)offset1Int;
+        dataBlock[position+1] = (byte)offset2Int;
+        
+        position += 2;
+        
+        // Match Length+
+        if(loTokenPlus != null){
+            System.arraycopy(loTokenPlus, 0, dataBlock, position, loTokenPlus.length);
+        }
+        
         System.out.println("Data Block: " + Arrays.toString(dataBlock));
 
         return dataBlock;
