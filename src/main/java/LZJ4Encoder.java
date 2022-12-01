@@ -41,7 +41,6 @@ public class LZJ4Encoder extends FileOperations {
 
     // Find the best matches avaliable from the current matches array
     public static int[] findBestMatches(byte[] array, byte literal) {
-
         // Get position of match of item in array
         // Output : ArrayList<{startOfMatch, lengthOfMatch}>    
         ArrayList<int[]> matches = new ArrayList<>();
@@ -72,7 +71,6 @@ public class LZJ4Encoder extends FileOperations {
                     break;
                 }
             }
-
             lit_pos = pos;
         }
 
@@ -89,6 +87,33 @@ public class LZJ4Encoder extends FileOperations {
         return bestMatch;
     }
     
+    private static byte[][] tokenPlusHandler(String hiToken, String loToken){
+        byte[] hiTokenPlus = new byte[0];
+        byte[] loTokenPlus = new byte[0];
+        int hiTokenDec = Integer.parseInt(hiToken, 2);
+        int loTokenDec = Integer.parseInt(loToken, 2);
+        while(hiTokenDec > 15){
+            hiTokenPlus = Arrays.copyOf(hiTokenPlus, hiTokenPlus.length + 1);
+            if(hiTokenDec <= 255){
+                hiTokenPlus[hiTokenPlus.length - 1] = (byte)hiTokenDec;
+                break;
+            }
+            hiTokenPlus[hiTokenPlus.length - 1] = (byte)255;
+            hiTokenDec -= 255;
+        }
+        
+        while(loTokenDec > 15){
+            loTokenPlus = Arrays.copyOf(loTokenPlus, loTokenPlus.length + 1);
+            if(loTokenDec <= 255){
+                loTokenPlus[loTokenPlus.length - 1] = (byte)loTokenDec;
+                break;
+            }
+            loTokenPlus[loTokenPlus.length - 1] = (byte)255;
+            loTokenDec -= 255;
+        }
+        return new byte[][]{hiTokenPlus, loTokenPlus};
+    }
+    
 
     private static void createDataBlock(byte[] literals, int startOfLiterals, int startOfMatch, int matchLength) {
 
@@ -96,22 +121,10 @@ public class LZJ4Encoder extends FileOperations {
         String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
         String loToken = String.format("%4s", Integer.toBinaryString(matchLength - 4)).replace(' ', '0');
         String token = hiToken + loToken;
-
-        //byte[] hiTokenPlus = new byte[0];
-        //byte[] loTokenPlus;
-        //int hiTokenDec = Integer.parseInt(hiToken, 2);
-        //int loTokenDec = Integer.parseInt(loToken, 2);
-        //if(hiTokenDec > 15){
-        //}
-        
-        // Converting the binary string token to decimal
-        //System.out.println(" new symbols: " + literals.length);
-        //System.out.println(" match len: " + matchLength);
-
         int tokenDec = Integer.parseInt(token, 2);
-
-        // The token value in decimal (will be converted to hex on writing)
-        // System.out.println(tokenDec);
+        
+        // Handling the case where the hi or lo token exceeds 15 (F)
+        byte[][] hiLoTokenPlus = tokenPlusHandler(hiToken, loToken);
 
         // Processing the offset
         String offset = "";
@@ -128,13 +141,15 @@ public class LZJ4Encoder extends FileOperations {
         String offsetByte1 = offsetHex.substring(2, 4);
         String offsetByte2 = offsetHex.substring(0, 2);
 
-
+        // Setting values for LZ4 block to be created
         lz4block.setToken((byte)tokenDec);
+        lz4block.setHiTokenPlus(hiLoTokenPlus[0]);
         lz4block.setSymbols(literals);
         lz4block.setOffset(offsetByte1, offsetByte2);
-
-        byte[] dataBlock = lz4block.createDataBlock();
+        lz4block.setHiTokenPlus(hiLoTokenPlus[1]);
         
+        // Creating and writing the LZ4 block
+        byte[] dataBlock = lz4block.createDataBlock();
         try {
             outStream.write(dataBlock);
             compressedData.add(dataBlock);
@@ -170,13 +185,6 @@ public class LZJ4Encoder extends FileOperations {
                 literalsToCopy[literalsToCopy.length - 1] = data[pos-1];
             }
 
-            /*
-            System.out.println("\npos: " + pos);
-            System.out.println("window: " + Arrays.toString(window));
-            System.out.println("literalsToCopy: " + Arrays.toString(literalsToCopy));        
-            System.out.println("literalToCheck (in window): " + (int)literalToCheck + " (" + (char)literalToCheck + ")");
-            */
-
             // If there are no matches, increase pos and continue
             if (bestMatch.length <= 0) {
                 //System.out.println("No matches");
@@ -184,7 +192,6 @@ public class LZJ4Encoder extends FileOperations {
                 continue;
             } else {
                 //System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
-                                
                 int matchStart = bestMatch[0];
                 matchLen = bestMatch[1];
                 
@@ -197,6 +204,7 @@ public class LZJ4Encoder extends FileOperations {
                     continue;
                 }
 
+                // Create the LZ4 data block using information aquired
                 createDataBlock(literalsToCopy, startOfLiterals, matchStart, matchLen);
                 
                 if(literalsToCopy.length <= 0){
@@ -206,13 +214,12 @@ public class LZJ4Encoder extends FileOperations {
                 }
                 //System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
                 
+                // Reset variables
                 startOfLiterals = pos;
                 matchLen = 0;
                 literalsToCopy = new byte[0];
                 blockJustCreated = true;
             }
-            
-
         }
     }
     
@@ -251,7 +258,7 @@ public class LZJ4Encoder extends FileOperations {
         for (String file : files) {
             
             //sourcePathStr = FileOperations.selectFile();         
-            sourcePathStr = "/home/lewis/lzj4/test_binaries/" + file;
+            sourcePathStr = "test_binaries/" + file;
             if(sourcePathStr == null){
                 System.out.println("No file selected!");
                 System.exit(0);
@@ -270,9 +277,9 @@ public class LZJ4Encoder extends FileOperations {
             
             System.out.println("Uncompressed data: " + Arrays.toString(data));
 
-            String outPathStr = "/home/lewis/lzj4/lz4_output_files/" + FILENAME + ".lz4";
+            //String outPathStr = "/home/lewis/lzj4/lz4_output_files/" + FILENAME + ".lz4";
 
-            //outPathStr = "out.lz4";
+            String outPathStr = "out.lz4";
             // Create a new file if not exists (else overwrite)
             FileOperations.createFile(outPathStr);
 
@@ -303,4 +310,3 @@ public class LZJ4Encoder extends FileOperations {
     }
 
 }
-
