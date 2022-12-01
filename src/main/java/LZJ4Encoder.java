@@ -90,22 +90,32 @@ public class LZJ4Encoder extends FileOperations {
     private static byte[][] tokenPlusHandler(String hiToken, String loToken){
         byte[] hiTokenPlus = new byte[0];
         byte[] loTokenPlus = new byte[0];
-        int hiTokenDec = Integer.parseInt(hiToken, 2);
-        int loTokenDec = Integer.parseInt(loToken, 2);
-        while(hiTokenDec > 15){
+        int hiTokenDec = Integer.parseInt(hiToken, 2) - 15;
+        int loTokenDec = Integer.parseInt(loToken, 2) - 15;
+        while(hiTokenDec > 0){
             hiTokenPlus = Arrays.copyOf(hiTokenPlus, hiTokenPlus.length + 1);
             if(hiTokenDec <= 255){
                 hiTokenPlus[hiTokenPlus.length - 1] = (byte)hiTokenDec;
+                // A value of 255 (FF) symbolises the addition of another byte
+                if(hiTokenDec == 255){
+                    hiTokenPlus = Arrays.copyOf(hiTokenPlus, hiTokenPlus.length + 1);
+                    hiTokenPlus[hiTokenPlus.length - 1] = (byte)0;
+                }
                 break;
             }
             hiTokenPlus[hiTokenPlus.length - 1] = (byte)255;
             hiTokenDec -= 255;
         }
         
-        while(loTokenDec > 15){
+        while(loTokenDec > 0){
             loTokenPlus = Arrays.copyOf(loTokenPlus, loTokenPlus.length + 1);
             if(loTokenDec <= 255){
                 loTokenPlus[loTokenPlus.length - 1] = (byte)loTokenDec;
+                // A value of 255 (FF) symbolises the addition of another byte
+                if(loTokenDec == 255){
+                    loTokenPlus = Arrays.copyOf(loTokenPlus, loTokenPlus.length + 1);
+                    loTokenPlus[loTokenPlus.length - 1] = (byte)0;
+                }
                 break;
             }
             loTokenPlus[loTokenPlus.length - 1] = (byte)255;
