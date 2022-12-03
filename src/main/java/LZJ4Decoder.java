@@ -1,4 +1,7 @@
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,23 +10,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
  
 
-public class LZJ4Decoder {
+public class LZJ4Decoder extends FileOperations {
 
-    public static String pathStr = "out.lz4";
-    public static Path PATH;
-    public static long FILESIZE;
-    public static ArrayList<byte[]> dataList = new ArrayList<>();
-    public static ArrayList<byte[]> outputList = new ArrayList<>();
-    public static int pos;
+    private static String fileName = "a20";
+    private static String pathStr = "/home/lewis/lzj4/lz4_output_files/" + fileName + ".lz4";
+    private static long fileSize;
+    private static ArrayList<byte[]> dataList = new ArrayList<>();
+    private static int pos;
+
+    // List to store all bytes to be written
+    private static FileOutputStream outStream;
     
     public static boolean magicNumber(){
         byte[] magic = {0x04, 0x22, 0x4d, 0x18};
         byte[] firstFour = new byte[4];
-        try{
-            InputStream is = new FileInputStream(pathStr);
+        try (InputStream is = new FileInputStream(pathStr)){
             // Reading first 4 bytes from file to be imported
             if (is.read(firstFour) != firstFour.length) {}
-            is.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -38,20 +41,20 @@ public class LZJ4Decoder {
          byte[] end = {0, 0, 0, 0};
         // Final 4 bytes
         for(int i=0; i<4; i++){
-            if(end[i] != dataList.get(0)[(int)FILESIZE-4+i]){return false;}
+            if(end[i] != dataList.get(0)[(int)fileSize-4+i]){return false;}
         }
         return true;
     }
     
     public static boolean importLZ4Data(){
         // file location
-        PATH = Paths.get(pathStr);
+        Path path = Paths.get(pathStr);
         // size in bytes initialize
-        FILESIZE = 0;
+        fileSize = 0;
         
         try{
             // get filesize of selected lz4 file
-            FILESIZE = Files.size(PATH);
+            fileSize = Files.size(path);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -61,11 +64,11 @@ public class LZJ4Decoder {
         // THIS ASSUMES FILESIZE IS WITHIN THE BOUNDS OF AN INT.
         // TODO: if filesize > Integer.Max split data into multiple
         // byte[] arrays and append to bytelist in order.
-        byte[] dataArray = new byte[(int)FILESIZE];
+        byte[] dataArray = new byte[(int)fileSize];
         
         try{
             // import lz4 data into bytearray
-            dataArray = Files.readAllBytes(PATH);
+            dataArray = Files.readAllBytes(path);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -73,6 +76,15 @@ public class LZJ4Decoder {
         
         dataList.add(dataArray);
         return true;
+    }
+
+    public static void writeData(byte[] dataToWrite){
+        try {
+            outStream.write(dataToWrite);
+        } catch (IOException e) {
+            System.out.println("writeData()");
+            e.printStackTrace();
+        }
     }
     
     public static void lz4Decode(){
@@ -85,14 +97,14 @@ public class LZJ4Decoder {
          
         // -5: last 5 bytes should be uncompressed,
         // -4: Ending Marker should be 00 00 00 00
-        while(pos<FILESIZE-5-4){
+        while(pos<fileSize-5-4){
             String token = Integer.toHexString(dataList.get(0)[pos] & 0xFF);
             // value of the token in hex
             token = (token.length() < 2 ? "0" + token : token);
 
-            
-            int noOfSymbols = Integer.parseInt(token.substring(0,1), 10);
-            int matchLen = Integer.parseInt(token.substring(1,2), 10) + 4;
+            // 16 symbolises hex-->decimal
+            int noOfSymbols = Integer.parseInt(token.substring(0,1), 16);
+            int matchLen = Integer.parseInt(token.substring(1,2), 16) + 4;
 
             System.out.println("pos: " + pos + " byte: " + token + " " + noOfSymbols);
              
@@ -101,7 +113,6 @@ public class LZJ4Decoder {
             //Iterating through literals
             for(int i=0; i<noOfSymbols; i++){
                 outData[currentByte] = dataList.get(0)[pos];
-                //System.out.println(outData[currentByte]);
                 System.out.println("pos: " + pos + " byte: " + outData[currentByte]);
                 currentByte++;
                 pos++;
@@ -126,18 +137,29 @@ public class LZJ4Decoder {
             
             // Append byte to outData in from every position between 
             // end of current outData and for matchLen position
+            byte[] writeBytes = new byte[0];
+            // create byte array to write to file
             for(int i=copyFrom; i<copyFrom+matchLen; i++){
                 outData[currentByte] = outData[i];
+                writeBytes = Arrays.copyOf(writeBytes, writeBytes.length + 1);
+                writeBytes[writeBytes.length - 1] = outData[currentByte];
                 currentByte++;
             }
+            // write the data
+            writeData(writeBytes);
 
         }
-        
+
+        byte[] writeBytes = new byte[0];        
         // Appending the final 5 uncompressed bytes
         for(int i=0; i<5; i++){
-           outData[currentByte] = dataList.get(0)[(int)FILESIZE-9+i];
+           outData[currentByte] = dataList.get(0)[(int)fileSize-9+i];
+           writeBytes = Arrays.copyOf(writeBytes, writeBytes.length + 1);
+           writeBytes[writeBytes.length - 1] = outData[currentByte];
            currentByte++;
         }
+        // write the data
+        writeData(writeBytes);
         
         //Verify the end marker matches 00 00 00 00
         if(!endMarkerCheck()){
@@ -153,7 +175,7 @@ public class LZJ4Decoder {
         
      }
     
-    public static void main(String args[]) {
+    public static void main(String[] args) throws FileNotFoundException {
         
         // Verify the magic number is correct
         if(!magicNumber()){
@@ -168,14 +190,23 @@ public class LZJ4Decoder {
         System.out.println("LZ4 Data Read Sucessful.");
         
         // Print LZ4 data to console
-        System.out.print("LZ4 data: ");
-        for(int i=0; i<FILESIZE; i++){
-            System.out.print((char)dataList.get(0)[i]);
+        System.out.print("LZ4 data: [ ");
+        for(int i=0; i<fileSize; i++){
+            System.out.print((int)dataList.get(0)[i] + ", ");
         }
-        System.out.print("\n");
-        
+        System.out.print("]\n");
+
+        String outPathStr = "/home/lewis/lzj4/decoder_output_files/" + fileName;
+        // Create a new file if not exists (else overwrite)
+        FileOperations.createFile(outPathStr);
+
+        // Create data stream for writing to file
+        outStream = FileOperations.createOutputStream(outPathStr);
+                
         // Decode the LZ4 data
         lz4Decode();
+
+        FileOperations.closeOutputStream(outStream);
         
     }
 }

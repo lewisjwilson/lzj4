@@ -7,37 +7,38 @@ import java.util.Arrays;
 public class LZJ4Encoder extends FileOperations {
 
     // Test Files
-    static String[] files = new String[]{"dk.txt", "a20", "abbccabbcccabbaabcc.txt"};
+    private static String[] files = new String[]{"dk.txt", "a20", "abbccabbcccabbaabcc.txt"};
 
     // Initiate the lz4 data block
     private static LZ4DataBlock lz4block = new LZ4DataBlock();
 
-    public static String sourcePathStr;
-    public static String FILENAME;
-    public static long FILESIZE;
-    public static long POS_LIMIT;
+    private static long fileSize;
+    private static long posLimit;
 
     // List to store all bytes of source file
-    public static ArrayList<byte[]> dataList = new ArrayList<>();
+    protected static ArrayList<byte[]> dataList = new ArrayList<>();
 
     // List to store all bytes to be written
-    public static FileOutputStream outStream;
-    public static ArrayList<byte[]> compressedData = new ArrayList<>();
+    protected static FileOutputStream outStream;
+    protected static ArrayList<byte[]> compressedData = new ArrayList<>();
 
     // Cursor position initialization
-    public static int pos = 1;
+    private static int pos = 1;
 
     private static void magicNumber(){
         byte[] magic = {0x04, 0x22, 0x4d, 0x18};
+        writeData(magic);
+    }
+
+    // Writing data to file
+    private static void writeData(byte[] dataToWrite){
         try {
-            outStream.write(magic);
-            compressedData.add(magic);
+            outStream.write(dataToWrite);
+            compressedData.add(dataToWrite);
         } catch (IOException e) {
-            System.out.println("LZJ4Encoder.magicNumber()");
             e.printStackTrace();
         }
     }
-
 
     // Find the best matches avaliable from the current matches array
     public static int[] findBestMatches(byte[] array, byte literal) {
@@ -52,26 +53,26 @@ public class LZJ4Encoder extends FileOperations {
         }
 
         // if the first literal does not match any literals in the window
-        if(matches.size() <= 0){return new int[0];}
+        if(matches.isEmpty()){return new int[0];}
 
         byte[] window = dataList.get(0);
-        int lit_pos = pos;
+        int litPos = pos;
         int[] bestMatch = new int[]{0, 0};
 
         // while there is more than one best match
         for (int[] match : matches) {
-            int match_pos = match[0];
+            int matchPos = match[0];
 
-            while(lit_pos <= POS_LIMIT){
-                if(window[lit_pos] == window[match_pos]){
-                    lit_pos++;
-                    match_pos++;
+            while(litPos <= posLimit){
+                if(window[litPos] == window[matchPos]){
+                    litPos++;
+                    matchPos++;
                     match[1]++;
                 } else {
                     break;
                 }
             }
-            lit_pos = pos;
+            litPos = pos;
         }
 
         int best = 0;
@@ -125,7 +126,7 @@ public class LZJ4Encoder extends FileOperations {
     }
     
 
-    private static void createDataBlock(byte[] literals, int startOfLiterals, int startOfMatch, int matchLength) {
+    private static void createDataBlock(byte[] literals, int startOfMatch, int matchLength) {
 
         // Creating the token
         String hiToken = String.format("%4s", Integer.toBinaryString(literals.length)).replace(' ', '0');
@@ -160,14 +161,7 @@ public class LZJ4Encoder extends FileOperations {
         
         // Creating and writing the LZ4 block
         byte[] dataBlock = lz4block.createDataBlock();
-        try {
-            outStream.write(dataBlock);
-            compressedData.add(dataBlock);
-        } catch (IOException e) {
-            System.out.println("LZJ4Encoder.createDataBlock()");
-            e.printStackTrace();
-        }
-
+        writeData(dataBlock);
     }
 
     public static void dataTraverse(byte[] data) {
@@ -176,13 +170,12 @@ public class LZJ4Encoder extends FileOperations {
         byte[] literalsToCopy = new byte[0];
         byte[] window;
         byte literalToCheck;
-        int startOfLiterals = 0;
 
         // used in the case that a block was just created and a new block will now be created with no literals
         boolean blockJustCreated = false;
 
         // For the entirety of the data (minus the trailing 5 bytes)
-        while(pos < POS_LIMIT) {
+        while(pos < posLimit) {
 
             window = Arrays.copyOfRange(data, 0, pos);      
             literalToCheck = data[pos];
@@ -197,16 +190,13 @@ public class LZJ4Encoder extends FileOperations {
 
             // If there are no matches, increase pos and continue
             if (bestMatch.length <= 0) {
-                //System.out.println("No matches");
                 pos++;
-                continue;
             } else {
-                //System.out.println("Best match (fromPos, matchLen): " + Arrays.toString(bestMatch));
                 int matchStart = bestMatch[0];
                 matchLen = bestMatch[1];
                 
                 if(matchLen < 4){
-                    if(pos+1 > POS_LIMIT){
+                    if(pos+1 > posLimit){
                         endOfData();
                     } else {
                         pos++;
@@ -215,18 +205,15 @@ public class LZJ4Encoder extends FileOperations {
                 }
 
                 // Create the LZ4 data block using information aquired
-                createDataBlock(literalsToCopy, startOfLiterals, matchStart, matchLen);
+                createDataBlock(literalsToCopy, matchStart, matchLen);
                 
                 if(literalsToCopy.length <= 0){
                     pos = pos + matchLen + 1;
                 } else {
                     pos = pos + matchLen;
                 }
-                //System.out.println("pos: " + pos + " , matchlen: " + matchLen + " , literals: " + lz4block.getSymbols().length);
                 
                 // Reset variables
-                startOfLiterals = pos;
-                matchLen = 0;
                 literalsToCopy = new byte[0];
                 blockJustCreated = true;
             }
@@ -235,31 +222,24 @@ public class LZJ4Encoder extends FileOperations {
     
     // Appending ending literals (in line with spec) and bytes (value 0)
     public static void endOfData() {
-        try {
-            System.out.println("pos; " + pos + " , FILESIZE; " + FILESIZE);
-            long noOfEndBytes = FILESIZE - pos + 1;
-            System.out.print("Final Uncompressed " + noOfEndBytes + " bytes: [");
-            while (pos <= FILESIZE) {
-                outStream.write((byte) dataList.get(0)[pos - 1]);
-                System.out.print(dataList.get(0)[pos - 1] + ", ");
-                pos++;
-            }
-            System.out.print("]\n");
 
-            byte[] endMarker = {0x00, 0x00, 0x00, 0x00};
-            try {
-                outStream.write(endMarker);
-            } catch (IOException e) {
-                System.out.println("LZJ4Encoder.endOfData()");
-                e.printStackTrace();
-            }
-
-            System.out.println("End Marker: [00, 00, 00, 00]");
-        } catch (IOException e) {
-            System.out.println("LZJ4Encoder.endOfData()");
-            e.printStackTrace();
+        System.out.println("pos; " + pos + " , FILESIZE; " + fileSize);
+        long noOfEndBytes = fileSize - pos + 1;
+        byte[] finalBytes = new byte[0];
+        System.out.print("Final Uncompressed " + noOfEndBytes + " bytes: [");
+        while (pos <= fileSize) {
+            finalBytes = Arrays.copyOf(finalBytes, finalBytes.length + 1);
+            finalBytes[finalBytes.length - 1] = dataList.get(0)[pos - 1];
+            System.out.print(dataList.get(0)[pos - 1] + ", ");
+            pos++;
         }
-        
+        System.out.print("]\n");
+        writeData(finalBytes);
+
+        byte[] endMarker = {0x00, 0x00, 0x00, 0x00};
+        writeData(endMarker);
+
+        System.out.println("End Marker: [00, 00, 00, 00]");        
     }
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -267,29 +247,28 @@ public class LZJ4Encoder extends FileOperations {
         // for each test file
         for (String file : files) {
             
-            //sourcePathStr = FileOperations.selectFile();         
-            sourcePathStr = "test_binaries/" + file;
-            if(sourcePathStr == null){
-                System.out.println("No file selected!");
-                System.exit(0);
-            }
+            String sourcePathStr = "/home/lewis/lzj4/test_binaries/" + file;
+            // TODO: implement file selector. This is relevant for that functionality
+            //if(sourcePathStr == null){
+            //    System.out.println("No file selected!");
+            //    System.exit(0);
+            //}
 
             String[] pathPieces = sourcePathStr.split("/");
-            FILENAME = pathPieces[pathPieces.length-1];
-            System.out.println("FILENAME: " + FILENAME);
+            String fileName = pathPieces[pathPieces.length-1];
+            System.out.println("FILENAME: " + fileName);
 
             // Get filesize of the source file and raw data
-            FILESIZE = FileOperations.getFileSize(sourcePathStr);
-            POS_LIMIT = FILESIZE-5;
+            fileSize = FileOperations.getFileSize(sourcePathStr);
+            posLimit = fileSize-5;
             dataList = FileOperations.importRawData(sourcePathStr);
 
             byte[] data = dataList.get(0);
             
             System.out.println("Uncompressed data: " + Arrays.toString(data));
 
-            //String outPathStr = "/home/lewis/lzj4/lz4_output_files/" + FILENAME + ".lz4";
+            String outPathStr = "/home/lewis/lzj4/lz4_output_files/" + fileName + ".lz4";
 
-            String outPathStr = "out.lz4";
             // Create a new file if not exists (else overwrite)
             FileOperations.createFile(outPathStr);
 
@@ -302,7 +281,6 @@ public class LZJ4Encoder extends FileOperations {
             endOfData();
 
             FileOperations.closeOutputStream(outStream);
-            //System.out.println("File \"" + outPathStr + "\" successfully written.");
 
             // Printing to verify compressed data in terminal
             System.out.print("Compressed Data: ");
