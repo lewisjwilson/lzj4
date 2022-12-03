@@ -12,8 +12,8 @@ import java.util.Arrays;
 
 public class LZJ4Decoder extends FileOperations {
 
-    private static String fileName = "a20";
-    private static String pathStr = "/home/lewis/lzj4/lz4_output_files/" + fileName + ".lz4";
+    private static String fileName = "dk.txt";
+    private static String pathStr = "/home/lewis/lzj4/verified_lz4_files/" + fileName + ".lz4";
     private static long fileSize;
     private static ArrayList<byte[]> dataList = new ArrayList<>();
     private static int pos;
@@ -109,14 +109,20 @@ public class LZJ4Decoder extends FileOperations {
             System.out.println("pos: " + pos + " byte: " + token + " " + noOfSymbols);
              
             pos++;
+
+            byte[] writeBytes = new byte[0];
             
             //Iterating through literals
             for(int i=0; i<noOfSymbols; i++){
                 outData[currentByte] = dataList.get(0)[pos];
+                writeBytes = Arrays.copyOf(writeBytes, writeBytes.length + 1);
+                writeBytes[writeBytes.length - 1] = outData[currentByte];
                 System.out.println("pos: " + pos + " byte: " + outData[currentByte]);
                 currentByte++;
                 pos++;
             }
+
+            writeData(writeBytes);
             
             // Symbols match is next two bytes (little endian)
             String offsetStr = Integer.toHexString(dataList.get(0)[pos+1] & 0xFF);
@@ -137,7 +143,7 @@ public class LZJ4Decoder extends FileOperations {
             
             // Append byte to outData in from every position between 
             // end of current outData and for matchLen position
-            byte[] writeBytes = new byte[0];
+            writeBytes = new byte[0];
             // create byte array to write to file
             for(int i=copyFrom; i<copyFrom+matchLen; i++){
                 outData[currentByte] = outData[i];

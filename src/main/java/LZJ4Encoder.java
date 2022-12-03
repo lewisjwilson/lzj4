@@ -26,7 +26,7 @@ public class LZJ4Encoder extends FileOperations {
     private static int pos = 1;
 
     private static void magicNumber(){
-        byte[] magic = {0x04, 0x22, 0x4d, 0x18};
+        byte[] magic = LZ4FrameFormat.magicNumber();
         writeData(magic);
     }
 
